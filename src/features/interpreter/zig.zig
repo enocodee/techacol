@@ -42,7 +42,7 @@ fn getMainNodeIdx(ast: Ast) ?Ast.Node.Index {
     var main_node_idx: ?std.zig.Ast.Node.Index = null;
 
     if (root.len == 1) {
-        if (isMain(ast, @enumFromInt(0)))
+        if (isMain(ast, root[0]))
             main_node_idx = root[0];
     } else {
         for (root) |i| {
