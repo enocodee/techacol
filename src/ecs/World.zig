@@ -64,11 +64,19 @@ alloc: std.mem.Allocator,
 ///
 /// This allocator will be passed to the `systems` as a parameter.
 arena: *std.heap.ArenaAllocator,
+/// TODO:
+/// - [ ] Do cmds linearly and independently of the main core loop.
+/// - [ ] Spawn multiple parallel piplines.
+thread_pool: *std.Thread.Pool,
 
 /// This function can cause to `panic` due to out of memory
-pub fn init(alloc: std.mem.Allocator) World {
+pub fn init(alloc: std.mem.Allocator) !World {
     const arena = alloc.create(std.heap.ArenaAllocator) catch @panic("OOM");
     arena.* = .init(alloc);
+
+    const thread_pool = arena.allocator().create(std.Thread.Pool) catch @panic("OOM");
+    errdefer arena.allocator().destroy(thread_pool);
+    try thread_pool.init(.{ .allocator = alloc });
 
     return .{
         .arena = arena,
@@ -76,6 +84,7 @@ pub fn init(alloc: std.mem.Allocator) World {
         .component_storages = .init(alloc),
         .systems = .empty,
         .resources = .init(alloc),
+        .thread_pool = thread_pool,
     };
 }
 
@@ -94,6 +103,8 @@ pub fn deinit(self: *World) void {
     while (resource_iter.next()) |entry| {
         entry.value_ptr.*.deinit_fn(self.*, self.alloc);
     }
+
+    self.thread_pool.deinit();
 
     self.component_storages.deinit();
     self.resources.deinit();
