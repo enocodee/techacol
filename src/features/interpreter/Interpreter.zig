@@ -109,9 +109,8 @@ pub const Command = union(enum) {
 
         /// Initialized the arguments of a command based
         /// on `arg_value`.
-        ///
-        /// Return null if errors are exposed.
-        /// Error messages will be written to `interpreter.errors`.
+        /// Return null if errors are exposed and messages
+        /// will be written to `interpreter.errors`.
         ///
         /// This function assert the `node_tag` should
         /// correspond to the command's arg types.
@@ -182,7 +181,6 @@ pub fn parse(
     return actions;
 }
 
-/// This function can cause to panic due to out of memory
 pub fn appendError(self: *Interpreter, alloc: std.mem.Allocator, err: Error) !void {
     try self.errors.append(alloc, err);
 }
