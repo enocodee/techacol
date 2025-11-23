@@ -3,7 +3,6 @@ const std = @import("std");
 const Interpreter = @import("Interpreter.zig");
 
 const Command = Interpreter.Command;
-
 const Ast = std.zig.Ast;
 
 // Contains all called functions in the main
@@ -149,4 +148,48 @@ fn extractErrorFromAst(
             .token = "",
         });
     }
+}
+
+test "parse action (zig)" {
+    var interpreter: Interpreter = .{};
+
+    // simulate the `World.arena`
+    var base_alloc = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer base_alloc.deinit();
+    const alloc = base_alloc.allocator();
+
+    const src1 =
+        \\pub fn main() void {}
+    ;
+
+    const cmds1 = try parse(alloc, &interpreter, src1);
+    try std.testing.expectEqual(0, cmds1.len);
+
+    const src2 =
+        \\pub fn () void {}
+    ;
+    _ = try parse(alloc, &interpreter, src2);
+    const err2: Interpreter.Error = .{
+        .tag = .main_not_found,
+        .token = "",
+    };
+    try std.testing.expectEqual(1, interpreter.errors.items.len);
+    try std.testing.expectEqual(err2, interpreter.errors.items[0]);
+    interpreter.errors.shrinkAndFree(alloc, 0); // reset errors
+
+    const src3 =
+        \\pub fn main() void {
+        \\  move(.up);
+        \\  move(.down);
+        \\  move(.left);
+        \\  move(.right);
+        \\}
+    ;
+    const cmds3 = try parse(alloc, &interpreter, src3);
+    try std.testing.expectEqual(4, cmds3.len);
+    try std.testing.expectEqual(.up, cmds3[0].move);
+    try std.testing.expectEqual(.down, cmds3[1].move);
+    try std.testing.expectEqual(.left, cmds3[2].move);
+    try std.testing.expectEqual(.right, cmds3[3].move);
+    interpreter.errors.shrinkAndFree(alloc, 0); // reset errors
 }
