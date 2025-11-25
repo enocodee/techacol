@@ -67,31 +67,39 @@ pub const Error = struct {
 };
 
 pub const Command = union(enum) {
-    /// Nothing action will be executed, the parser should return errors
-    move: @import("../digger/mod.zig").action.MoveDirection,
+    @"if": IfStatementInfo,
+    move: @import("../digger/mod.zig").move.MoveDirection,
+
+    pub const IfStatementInfo = struct {
+        condition_value: bool,
+        /// number of commands in the `if` body
+        num_of_cmds: u64,
+    };
 
     pub const Parser = struct {
-        alloc: std.mem.Allocator,
         interpreter: *Interpreter,
 
-        pub fn init(alloc: std.mem.Allocator, i: *Interpreter) Parser {
+        pub const Error = error{OutOfMemory};
+
+        pub fn init(i: *Interpreter) Parser {
             return .{
-                .alloc = alloc,
                 .interpreter = i,
             };
         }
 
         pub fn parse(
             self: Parser,
+            alloc: std.mem.Allocator,
             cmd_name: []const u8,
-            arg_value: []const u8,
+            cmd_value: anytype,
             node_tag: std.zig.Ast.Node.Tag,
-        ) !?Command {
+        ) Parser.Error!?Command {
             inline for (std.meta.fields(Command)) |f| {
                 if (std.mem.eql(u8, f.name, cmd_name)) {
                     if (try self.parseArg(
+                        alloc,
                         f.name,
-                        arg_value,
+                        cmd_value,
                         node_tag,
                     )) |arg| {
                         return @unionInit(Command, f.name, arg);
@@ -99,7 +107,7 @@ pub const Command = union(enum) {
                 }
             }
 
-            try self.interpreter.appendError(self.alloc, .{
+            try self.interpreter.appendError(alloc, .{
                 .tag = .unknown_action,
                 .token = cmd_name,
             });
@@ -113,36 +121,69 @@ pub const Command = union(enum) {
         ///
         /// This function assert the `node_tag` should
         /// correspond to the command's arg types.
+        ///
+        /// # Features:
+        /// * `arg_type` == `enum` => `arg_value` should be a `[]const u8` (enum variant).
+        /// Example:
+        /// ```
+        /// arg_type = digger.MoveDirection.down
+        /// arg_value = "down" & cmd = "move"
+        /// ```
+        ///
+        /// * `arg_type` == `struct` => `arg_value` should be a `struct`.
+        /// Example:
+        /// ```
+        /// arg_type = IfStatementInfo
+        /// arg_value = IfStatementInfo {...} & cmd = "if"
+        /// ```
         pub fn parseArg(
             self: Parser,
-            comptime action: []const u8,
-            arg_value: []const u8,
+            alloc: std.mem.Allocator,
+            comptime cmd: []const u8,
+            cmd_value: anytype,
             node_tag: std.zig.Ast.Node.Tag,
-        ) !?@FieldType(Command, action) {
-            // TODO: handle more data types
-            switch (@typeInfo(@FieldType(Command, action))) {
+        ) Parser.Error!?@FieldType(Command, cmd) {
+            const typeInfo = @typeInfo(@FieldType(Command, cmd));
+            // TODO: handle more data types:
+            //       + Struct
+            //       + Array
+            switch (typeInfo) {
                 .@"enum" => {
+                    if (@TypeOf(cmd_value) != []const u8)
+                        std.debug.panic("Expected `[]const u8`, found `{s}`.", .{
+                            @typeName(@TypeOf(cmd_value)),
+                        });
                     std.debug.assert(node_tag == .enum_literal);
 
-                    const action_type = @FieldType(Command, action);
-                    const normalized_action_type = try utils.normalizedActionType(
-                        self.alloc,
-                        @typeName(action_type),
-                    );
+                    const T = @FieldType(Command, cmd);
+                    const normalized_action_type = utils.normalizedActionType(
+                        alloc,
+                        @typeName(T),
+                    ) catch return Parser.Error.OutOfMemory;
 
                     return std.meta.stringToEnum(
-                        action_type,
-                        arg_value,
+                        T,
+                        cmd_value,
                     ) orelse {
-                        try self.interpreter.appendError(self.alloc, .{
+                        self.interpreter.appendError(alloc, .{
                             .tag = .expected_type_action,
                             .extra = .{
                                 .expected_token = normalized_action_type,
                             },
-                            .token = arg_value,
-                        });
+                            .token = cmd_value,
+                        }) catch return Parser.Error.OutOfMemory;
                         return null;
                     };
+                },
+                .@"struct" => {
+                    const StructType = @FieldType(Command, cmd);
+                    if (@TypeOf(cmd_value) != StructType)
+                        std.debug.panic("Expected `struct`, found `{s}`", .{
+                            @typeName(@TypeOf(StructType)),
+                        });
+                    std.debug.assert(node_tag == .struct_init_dot or node_tag == .struct_init_dot_two);
+
+                    return @as(StructType, cmd_value);
                 },
                 else => unreachable, // not supported type
             }
