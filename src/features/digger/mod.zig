@@ -12,7 +12,8 @@ const Area = @import("../area/components.zig").Area;
 pub const Digger = @import("components.zig").Digger;
 
 const systems = @import("systems.zig");
-pub const action = @import("utils/action.zig");
+
+pub const move = @import("actions/move.zig");
 
 pub fn build(w: *World) void {
     _ = w
