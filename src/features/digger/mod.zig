@@ -13,7 +13,8 @@ pub const Digger = @import("components.zig").Digger;
 
 const systems = @import("systems.zig");
 
-pub const move = @import("actions/move.zig");
+pub const move = @import("cmds/move.zig");
+pub const check = @import("cmds/check.zig");
 
 pub fn build(w: *World) void {
     _ = w
