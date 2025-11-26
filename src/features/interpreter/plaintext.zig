@@ -23,7 +23,7 @@ pub fn parse(
         const should_be_value = tokenizer.next() orelse {
             try interpreter.appendError(alloc, .{
                 .tag = .expected_type_action,
-                .extra = .{ .expected_token = "arguments" },
+                .extra = .{ .expected_token = .{ .str = "arguments" } },
                 .token = "empty",
             });
             break;
@@ -35,7 +35,10 @@ pub fn parse(
             maybe_cmd = try command_parser.parse(
                 alloc,
                 "if",
-                Command.IfStatementInfo{ .condition_value = true, .num_of_cmds = 0 },
+                Command.IfStatementInfo{
+                    .condition = .{ .value = false },
+                    .num_of_cmds = 0,
+                },
                 .enum_literal,
             );
         } else {
@@ -74,17 +77,23 @@ test "parse action (plaintext)" {
     const action_2 = "nothing arg";
     _ = try parse(alloc, &interpreter, action_2);
 
+    var err_2 = list_err.*.getLast();
+    defer err_2.deinit(alloc);
+
     try std.testing.expectEqualDeep(Error{
         .tag = .unknown_action,
         .token = "nothing",
-    }, list_err.*.getLast());
+    }, err_2);
 
     const action_3 = "move forward";
     _ = try parse(alloc, &interpreter, action_3);
 
+    var err_3 = list_err.*.getLast();
+    defer err_3.deinit(alloc);
+
     try std.testing.expectEqualDeep(Error{
         .tag = .expected_type_action,
-        .extra = .{ .expected_token = "digger.MoveDirection" },
+        .extra = .{ .expected_token = .{ .allocated_str = "digger.MoveDirection" } },
         .token = "forward",
-    }, list_err.*.getLast());
+    }, err_3);
 }
