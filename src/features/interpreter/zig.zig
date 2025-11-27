@@ -165,7 +165,7 @@ fn parseIfNode(
         .@"if" = .default(),
     }) catch return Command.Parser.ParseError.OutOfMemory;
 
-    const if_cond = try parseIfCond(alloc, command_parser, ast, cond_expr_idx, list);
+    const if_cond = try parseCondExpr(alloc, command_parser, ast, cond_expr_idx, list);
     list.items[items_count].@"if".condition = if_cond;
 
     const semi_node_idx = if_statement.ast.then_expr;
@@ -184,8 +184,8 @@ fn parseIfNode(
     list.items[items_count].@"if".num_of_cmds = num_of_cmds;
 }
 
-/// if (<cond_expr>) {...}
-pub fn parseIfCond(
+/// Parse condition expressions in `if`, `for`, `while` statements
+pub fn parseCondExpr(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
     ast: Ast,
@@ -212,11 +212,11 @@ pub fn parseIfCond(
             const node_data = ast.nodeData(idx).node_and_node;
             const lhs: *CondExpr = try alloc.create(CondExpr);
             errdefer alloc.destroy(lhs);
-            lhs.* = try parseIfCond(alloc, command_parser, ast, node_data[0], list);
+            lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[0], list);
 
             const rhs: *CondExpr = try alloc.create(CondExpr);
             errdefer alloc.destroy(rhs);
-            rhs.* = try parseIfCond(alloc, command_parser, ast, node_data[1], list);
+            rhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[1], list);
 
             cond = .{ .expr_and = .{ .@"0" = lhs, .@"1" = rhs } };
         },
@@ -224,11 +224,11 @@ pub fn parseIfCond(
             const node_data = ast.nodeData(idx).node_and_node;
             const lhs: *CondExpr = try alloc.create(CondExpr);
             errdefer alloc.destroy(lhs);
-            lhs.* = try parseIfCond(alloc, command_parser, ast, node_data[0], list);
+            lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[0], list);
 
             const rhs: *CondExpr = try alloc.create(CondExpr);
             errdefer alloc.destroy(rhs);
-            rhs.* = try parseIfCond(alloc, command_parser, ast, node_data[1], list);
+            rhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[1], list);
 
             cond = .{ .expr_or = .{ .@"0" = lhs, .@"1" = rhs } };
         },
@@ -236,7 +236,7 @@ pub fn parseIfCond(
             const node_data = ast.nodeData(idx).node;
             const lhs: *CondExpr = try alloc.create(CondExpr);
             errdefer alloc.destroy(lhs);
-            lhs.* = try parseIfCond(alloc, command_parser, ast, node_data, list);
+            lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data, list);
 
             cond = .{ .not_expr = .{ .@"0" = lhs } };
         },
