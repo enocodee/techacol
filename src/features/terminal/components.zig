@@ -22,60 +22,45 @@ pub const CommandExecutor = struct {
     //
     // `null` if this is used in the first time.
     last_bool_result: ?bool = null,
-
     /// The timestamp of the previous command execution
     /// in miliseconds.
     /// The timer is started from the first commmands is added.
     timer: ?std.time.Timer = null,
     is_running: bool = false,
+    /// The number of available commands in queue.
+    count: u64 = 0,
+    /// The current index to get node.
+    curr_idx: u64 = 0,
 
-    const Queue = std.SinglyLinkedList;
-
-    const Item = struct {
-        data: Command,
-        node: Queue.Node = .{},
-    };
+    const Queue = std.ArrayList(Command);
 
     pub fn init(alloc: std.mem.Allocator) CommandExecutor {
         return .{
-            .queue = .{},
+            .queue = .empty,
             .alloc = alloc,
         };
     }
 
     /// Drain nodes in the queue.
-    pub fn denit(self: *CommandExecutor, _: std.mem.Allocator) void {
-        while (self.dequeue()) |node| {
-            self.removeNode(node);
-        }
+    pub fn deinit(self: *CommandExecutor, _: std.mem.Allocator) void {
+        self.queue.deinit(self.alloc);
     }
 
     pub fn enqueue(self: *CommandExecutor, cmd: Command) !void {
-        const it = try self.alloc.create(Item);
-        errdefer self.alloc.destroy(it);
-        it.* = .{ .data = cmd };
-
-        if (self.queue.first == null) {
-            self.is_running = true;
-            self.timer = try .start();
-            self.queue.first = &it.node;
-        } else {
-            var curr_node = self.queue.first.?;
-            while (curr_node.next != null) {
-                curr_node = curr_node.next.?;
-            }
-
-            curr_node.insertAfter(&it.node);
-        }
+        self.is_running = true;
+        self.timer = try .start();
+        try self.queue.append(self.alloc, cmd);
+        self.count += 1;
     }
 
-    /// Remove and return the first node in the queue.
-    pub fn dequeue(self: *CommandExecutor) ?Command {
-        const node = self.queue.popFirst() orelse return null;
-        const item: *Item = @fieldParentPtr("node", node);
-        const command = item.data;
-        self.alloc.destroy(item);
-        return command;
+    /// return the next node in the queue.
+    pub fn next(self: *CommandExecutor) ?Command {
+        const idx = self.curr_idx;
+        if (idx >= self.count) return null;
+
+        const it = self.queue.items[idx];
+        self.curr_idx += 1;
+        return it;
     }
 
     /// Execute next command in the queue in a duration
@@ -90,7 +75,7 @@ pub const CommandExecutor = struct {
             const lap = timer.read();
 
             if (lap > target_ns) {
-                if (self.dequeue()) |command| {
+                if (self.next()) |command| {
                     timer.reset();
 
                     try self.handleNode(w, command);
@@ -122,9 +107,9 @@ pub const CommandExecutor = struct {
 
                 if (!cond_expr_result) {
                     var idx: usize = 1;
-                    var curr_node = self.dequeue();
+                    var curr_node = self.next();
                     while (curr_node != null and idx < info.num_of_cmds) {
-                        curr_node = self.dequeue();
+                        curr_node = self.next();
                         idx += 1;
                     }
                 }
@@ -145,7 +130,7 @@ pub const CommandExecutor = struct {
         switch (condition.*) {
             .value => |v| return v,
             .expr => {
-                const expr_cmd = self.dequeue().?;
+                const expr_cmd = self.next().?;
                 try self.handleNode(w, expr_cmd);
                 return self.last_bool_result.?;
             },
