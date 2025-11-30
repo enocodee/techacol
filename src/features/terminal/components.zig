@@ -59,7 +59,6 @@ pub const CommandExecutor = struct {
         if (idx >= self.count) return null;
 
         const it = self.queue.items[idx];
-        self.curr_idx += 1;
         return it;
     }
 
@@ -115,6 +114,7 @@ pub const CommandExecutor = struct {
                 }
             },
         }
+        self.curr_idx += 1;
     }
 
     /// return the final result of the condition expression of the `if` command
