@@ -167,8 +167,8 @@ pub const Command = union(enum) {
             /// if(true) {...}
             /// if(false) {...}
             ///
-            /// Assign the boolean value directly.
-            value: bool,
+            /// Using boolean values literally.
+            literal: bool,
 
             pub fn deinit(self: *CondExpr, alloc: std.mem.Allocator) void {
                 switch (self.*) {

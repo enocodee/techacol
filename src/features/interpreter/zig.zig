@@ -199,7 +199,7 @@ pub fn parseCondExpr(
     switch (node_tag) {
         .identifier => {
             const main_token = ast.nodeMainToken(idx);
-            cond = .{ .value = std.mem.eql(
+            cond = .{ .literal = std.mem.eql(
                 u8,
                 ast.tokenSlice(main_token),
                 "true",
@@ -381,7 +381,7 @@ test "(zig) parse command: if statement" {
     try std.testing.expectEqual(4, cmds1.len);
     try std.testing.expectEqual(
         Command.IfStatementInfo{
-            .condition = .{ .value = true },
+            .condition = .{ .literal = true },
             .num_of_cmds = 1,
         },
         cmds1[0].@"if",
@@ -389,7 +389,7 @@ test "(zig) parse command: if statement" {
     try std.testing.expectEqual(.down, cmds1[1].move);
     try std.testing.expectEqual(
         Command.IfStatementInfo{
-            .condition = .{ .value = false },
+            .condition = .{ .literal = false },
             .num_of_cmds = 1,
         },
         cmds1[2].@"if",

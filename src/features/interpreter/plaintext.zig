@@ -36,7 +36,7 @@ pub fn parse(
                 alloc,
                 "if",
                 Command.IfStatementInfo{
-                    .condition = .{ .value = false },
+                    .condition = .{ .literal = false },
                     .num_of_cmds = 0,
                 },
                 .enum_literal,
