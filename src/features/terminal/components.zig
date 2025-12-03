@@ -6,6 +6,8 @@ const World = @import("ecs").World;
 const Interpreter = @import("../interpreter/Interpreter.zig");
 const Command = Interpreter.Command;
 
+const QueryError = @import("ecs").World.QueryError;
+
 pub const Terminal = struct {};
 
 /// All commands will be executed in FIFO order
@@ -107,7 +109,7 @@ pub const CommandExecutor = struct {
         self: *CommandExecutor,
         w: *World,
         command: Command,
-    ) @import("ecs").World.QueryError!void {
+    ) QueryError!void {
         switch (command) {
             .move => |direction| {
                 self.timer.?.reset();
@@ -128,9 +130,11 @@ pub const CommandExecutor = struct {
                     info.num_of_cmds,
                 );
 
-                if (!cond_expr_result) {
+                if (!cond_expr_result.bool) {
+                    if (info.num_of_cmds <= 0) return;
                     var idx: usize = 1;
                     var curr_node = self.next();
+
                     while (curr_node != null and idx < info.num_of_cmds) {
                         curr_node = self.next();
                         idx += 1;
@@ -161,6 +165,11 @@ pub const CommandExecutor = struct {
         }
     }
 
+    const CondValue = union(enum) {
+        bool: bool,
+        int: isize,
+    };
+
     /// return the final result of the condition expression of the `if` command
     fn evaluateCondExpr(
         self: *CommandExecutor,
@@ -168,38 +177,72 @@ pub const CommandExecutor = struct {
         condition: *Interpreter.Command.IfStatementInfo.CondExpr,
         /// Number of cmds in the `if` body
         num_of_cmds: u64,
-    ) !bool {
+    ) QueryError!CondValue {
         switch (condition.*) {
-            .value => |v| return v,
+            .literal => |v| return .{ .bool = v },
+            .number_literal => |v| return .{ .int = v },
             .expr => {
                 const expr_cmd = self.next().?;
                 try self.handleNode(w, expr_cmd);
-                return self.last_bool_result.?;
+                return .{ .bool = self.last_bool_result.? };
             },
             .expr_and => |expr| {
-                const lhs = expr[1];
-                const lhs_value = try self.evaluateCondExpr(w, lhs, num_of_cmds);
-
-                const rhs = expr[0];
-                const rhs_value = try self.evaluateCondExpr(w, rhs, num_of_cmds);
-
-                return (lhs_value and rhs_value);
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".bool and values.@"1".bool };
             },
             .expr_or => |expr| {
-                const lhs = expr[1];
-                const lhs_value = try self.evaluateCondExpr(w, lhs, num_of_cmds);
-
-                const rhs = expr[0];
-                const rhs_value = try self.evaluateCondExpr(w, rhs, num_of_cmds);
-
-                return (lhs_value or rhs_value);
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".bool or values.@"1".bool };
             },
             .not_expr => |expr| {
                 const lhs = expr[0];
                 const lhs_value = try self.evaluateCondExpr(w, lhs, num_of_cmds);
 
-                return !lhs_value;
+                return .{ .bool = lhs_value.bool };
+            },
+            .greater => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int > values.@"1".int };
+            },
+            .greater_or_equal => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int >= values.@"1".int };
+            },
+            .less => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int < values.@"1".int };
+            },
+            .less_or_equal => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int <= values.@"1".int };
+            },
+            .equal => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int == values.@"1".int };
+            },
+            .diff => |expr| {
+                const values = try self.evaluateCondExpr2(w, expr, num_of_cmds);
+                return .{ .bool = values.@"0".int != values.@"1".int };
             },
         }
+    }
+
+    /// Evaluate two-handside condition expressions
+    pub fn evaluateCondExpr2(
+        self: *CommandExecutor,
+        w: *World,
+        expr: struct {
+            *Command.IfStatementInfo.CondExpr,
+            *Command.IfStatementInfo.CondExpr,
+        },
+        num_of_cmds: u64,
+    ) QueryError!struct { CondValue, CondValue } {
+        const lhs = expr[0];
+        const lhs_value = try self.evaluateCondExpr(w, lhs, num_of_cmds);
+
+        const rhs = expr[1];
+        const rhs_value = try self.evaluateCondExpr(w, rhs, num_of_cmds);
+
+        return .{ .@"0" = lhs_value, .@"1" = rhs_value };
     }
 };

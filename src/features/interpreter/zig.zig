@@ -192,7 +192,7 @@ pub fn parseCondExpr(
     ast: Ast,
     idx: Ast.Node.Index,
     list: *std.ArrayList(Command),
-) !Command.IfStatementInfo.CondExpr {
+) ParseError!Command.IfStatementInfo.CondExpr {
     const node_tag = ast.nodeTag(idx);
     var cond: Command.IfStatementInfo.CondExpr = undefined;
 
@@ -205,34 +205,20 @@ pub fn parseCondExpr(
                 "true",
             ) };
         },
+        .number_literal => {
+            const main_token = ast.nodeMainToken(idx);
+            cond = .{ .number_literal = try std.fmt.parseInt(
+                isize,
+                ast.tokenSlice(main_token),
+                10,
+            ) };
+        },
         .call_one => {
             try parseCallNode(alloc, command_parser, ast, idx, list);
             cond = .{ .expr = {} };
         },
-        .bool_and => {
-            const node_data = ast.nodeData(idx).node_and_node;
-            const lhs: *CondExpr = try alloc.create(CondExpr);
-            errdefer alloc.destroy(lhs);
-            lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[0], list);
-
-            const rhs: *CondExpr = try alloc.create(CondExpr);
-            errdefer alloc.destroy(rhs);
-            rhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[1], list);
-
-            cond = .{ .expr_and = .{ .@"0" = lhs, .@"1" = rhs } };
-        },
-        .bool_or => {
-            const node_data = ast.nodeData(idx).node_and_node;
-            const lhs: *CondExpr = try alloc.create(CondExpr);
-            errdefer alloc.destroy(lhs);
-            lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[0], list);
-
-            const rhs: *CondExpr = try alloc.create(CondExpr);
-            errdefer alloc.destroy(rhs);
-            rhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[1], list);
-
-            cond = .{ .expr_or = .{ .@"0" = lhs, .@"1" = rhs } };
-        },
+        .bool_and => cond = .{ .expr_and = try doubleHandside(alloc, command_parser, ast, idx, list) },
+        .bool_or => cond = .{ .expr_or = try doubleHandside(alloc, command_parser, ast, idx, list) },
         .bool_not => {
             const node_data = ast.nodeData(idx).node;
             const lhs: *CondExpr = try alloc.create(CondExpr);
@@ -241,10 +227,47 @@ pub fn parseCondExpr(
 
             cond = .{ .not_expr = .{ .@"0" = lhs } };
         },
+        .greater_than => cond = .{
+            .greater = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
+        .greater_or_equal => cond = .{
+            .greater_or_equal = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
+        .less_than => cond = .{
+            .less = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
+        .less_or_equal => cond = .{
+            .less_or_equal = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
+        .equal_equal => cond = .{
+            .equal = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
+        .bang_equal => cond = .{
+            .diff = try doubleHandside(alloc, command_parser, ast, idx, list),
+        },
         else => unreachable,
     }
 
     return cond;
+}
+
+pub fn doubleHandside(
+    alloc: std.mem.Allocator,
+    command_parser: *Command.Parser,
+    ast: Ast,
+    idx: Ast.Node.Index,
+    list: *std.ArrayList(Command),
+) ParseError!struct { *CondExpr, *CondExpr } {
+    const node_data = ast.nodeData(idx).node_and_node;
+    const lhs: *CondExpr = try alloc.create(CondExpr);
+    errdefer alloc.destroy(lhs);
+    lhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[0], list);
+
+    const rhs: *CondExpr = try alloc.create(CondExpr);
+    errdefer alloc.destroy(rhs);
+    rhs.* = try parseCondExpr(alloc, command_parser, ast, node_data[1], list);
+
+    return .{ .@"0" = lhs, .@"1" = rhs };
 }
 
 fn parseForNode(
