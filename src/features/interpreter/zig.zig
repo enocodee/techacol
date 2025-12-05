@@ -270,6 +270,9 @@ pub fn doubleHandside(
     return .{ .@"0" = lhs, .@"1" = rhs };
 }
 
+// TODO: Support:
+//       + payload item
+//       + slices: for(arr)
 fn parseForNode(
     alloc: std.mem.Allocator,
     command_parser: *Command.Parser,
