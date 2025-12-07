@@ -176,7 +176,7 @@ pub const CommandExecutor = struct {
 
     const CondValue = union(enum) {
         bool: bool,
-        int: isize,
+        int: usize,
     };
 
     /// return the final result of the condition expression of the `if` command

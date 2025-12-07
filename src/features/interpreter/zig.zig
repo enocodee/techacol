@@ -293,7 +293,7 @@ pub fn parseCondExpr(
         .number_literal => {
             const main_token = ast.nodeMainToken(idx);
             cond = .{ .number_literal = try std.fmt.parseInt(
-                isize,
+                usize,
                 ast.tokenSlice(main_token),
                 10,
             ) };
