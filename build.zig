@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const raylib = raylib_dep.module("raylib");
+    const raygui = raylib_dep.module("raygui");
     const raylib_artifact = raylib_dep.artifact("raylib");
 
     const ecs_mod = b.addModule("ecs", .{
@@ -37,6 +38,7 @@ pub fn build(b: *std.Build) void {
         const run_exe = b.addRunArtifact(exe);
         exe.linkLibrary(raylib_artifact);
         exe.root_module.addImport("raylib", raylib);
+        exe.root_module.addImport("raygui", raygui);
         run_step.dependOn(&run_exe.step);
     }
 
@@ -56,6 +58,7 @@ pub fn build(b: *std.Build) void {
         const run_test = b.addRunArtifact(test_exe);
         test_exe.linkLibrary(raylib_artifact);
         test_exe.root_module.addImport("raylib", raylib);
+        test_exe.root_module.addImport("raygui", raygui);
 
         test_exe.root_module.addImport("ecs", ecs_mod);
         run_test_step.dependOn(&run_test.step);

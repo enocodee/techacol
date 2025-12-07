@@ -3,6 +3,7 @@ const rl = @import("raylib");
 const ecs_common = @import("ecs").common;
 const resources = @import("resources.zig");
 const systems = @import("systems.zig");
+const components = @import("components.zig");
 
 const World = @import("ecs").World;
 const Button = ecs_common.Button;
@@ -13,9 +14,10 @@ const Buffer = resources.Buffer;
 const State = resources.State;
 const Style = resources.Style;
 
+const Executor = components.CommandExecutor;
 const GameAssets = @import("../../GameAssets.zig");
 
-pub const Terminal = struct {};
+pub const Terminal = components.Terminal;
 
 pub fn build(w: *World) void {
     var assets = w.getMutResource(GameAssets) catch unreachable;
@@ -27,10 +29,12 @@ pub fn build(w: *World) void {
         .addResource(State, .{})
         .addSystem(.startup, spawn)
         .addSystems(.update, &.{
+        systems.input.execCmds,
         systems.status.inHover,
         systems.status.inWindowResizing,
         systems.status.inFocused,
         systems.status.inClickedRun,
+        systems.status.inCmdRunning,
         systems.render.render,
     });
 }
@@ -78,5 +82,11 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
         .{ .content = "Run", .font = style.font },
         .{ .x = (rl.getScreenWidth() - 300), .y = 360 },
         .{ .width = 100, .height = 50, .color = .gray },
+    });
+
+    // the command executor
+    w.spawnEntity(&.{ Terminal, Executor }, .{
+        .{},
+        .init(w.alloc),
     });
 }

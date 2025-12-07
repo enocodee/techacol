@@ -6,10 +6,12 @@ const input = @import("input.zig");
 
 const World = @import("ecs").World;
 const Terminal = @import("../mod.zig").Terminal;
+const Executor = @import("../components.zig").CommandExecutor;
 
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
 const Button = ecs_common.Button;
+const Grid = ecs_common.Grid;
 
 const State = resource.State;
 const Buffer = resource.Buffer;
@@ -55,10 +57,12 @@ pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
 pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
     const state = try w.getMutResource(State);
     const buf = try w.getMutResource(Buffer);
+    const grid = (try w.query(&.{ Grid, Terminal }))[0][0];
 
     if (state.is_focused) {
         try input.scan(
             buf.chars,
+            grid.num_of_cols,
             &buf.char_count,
             @intCast(buf.capacity),
             &state.ts_backspace,
@@ -67,6 +71,7 @@ pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
 }
 
 pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
+    const state = try w.getResource(State);
     const pos, const rec, _, _ = (try w.query(&.{ Position, Rectangle, Button, Terminal }))[0];
     const buf = try w.getResource(Buffer);
 
@@ -79,8 +84,26 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
             .height = @floatFromInt(rec.height),
         },
     )) {
-        if (rl.isMouseButtonPressed(.left)) {
-            try input.process(w, buf.chars[0..@intCast(buf.char_count)]);
+        if (rl.isMouseButtonPressed(.left) and state.active) {
+            try input.process(
+                w,
+                w.alloc,
+                buf.chars[0..@intCast(buf.char_count)],
+                @enumFromInt(state.selected_lang),
+            );
         }
+    }
+}
+
+pub fn inCmdRunning(w: *World, _: std.mem.Allocator) !void {
+    const state = try w.getMutResource(State);
+    const executor = (try w.query(&.{ Executor, Terminal }))[0][0];
+    const run_btn = (try w.query(&.{ *Button, Terminal }))[0][0];
+
+    state.*.active = !executor.is_running;
+    if (state.active) {
+        run_btn.content = "Run";
+    } else {
+        run_btn.content = "Executing";
     }
 }

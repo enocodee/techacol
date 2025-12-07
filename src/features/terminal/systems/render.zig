@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const rg = @import("raygui");
 const ecs_common = @import("ecs").common;
 const resource = @import("../resources.zig");
 
@@ -26,16 +27,37 @@ pub fn render(w: *World, _: std.mem.Allocator) !void {
     const buf = try w.getResource(Buffer);
     const state = try w.getMutResource(State);
 
-    const queries = try w.query(&.{ Grid, Terminal });
-    const grid, _ = queries[0];
+    const queries = try w.query(&.{ Grid, Position, Rectangle, Terminal });
+    const grid, const pos, const rec, _ = queries[0];
 
+    drawLangSelection(state, rec, pos);
     drawContent(grid, buf.chars, style, .{ .x = 0, .y = 0 });
     drawCursor(grid, buf, state, style, .{ .x = 0, .y = 0 });
 }
 
+fn drawLangSelection(state: *State, rec: Rectangle, pos: Position) void {
+    const language_select_rec = rl.Rectangle.init(
+        @floatFromInt(pos.x + rec.width - 100),
+        @floatFromInt(pos.y - 10),
+        100,
+        10,
+    );
+
+    const is_selecting_lang: bool = rg.dropdownBox(
+        language_select_rec,
+        "plaintext;zig",
+        &state.selected_lang,
+        state.lang_box_is_opened,
+    ) == 1;
+
+    if (is_selecting_lang) {
+        state.lang_box_is_opened = !state.lang_box_is_opened;
+    }
+}
+
 fn drawContent(grid: Grid, content: [:0]u8, style: Style, pad: Padding) void {
     for (content, 0..) |c, i| {
-        if (c != 0) {
+        if (c != 0 and c != 13) {
             const real_pos = grid.matrix[i];
 
             rl.drawTextEx(
