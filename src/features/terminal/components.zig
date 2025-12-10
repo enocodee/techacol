@@ -114,6 +114,7 @@ pub const Buffer = struct {
 
         for (self.lines.items) |line| {
             try list.appendSlice(alloc, line.items[0..line.items.len]);
+            try list.append(alloc, ' ');
         }
 
         return list.toOwnedSlice(alloc);
