@@ -123,7 +123,6 @@ pub const Buffer = struct {
     ///
     /// Asserts that the current line equals or less than the total line.
     pub fn insert(self: *Buffer, alloc: std.mem.Allocator, char: u8) !void {
-        // TODO: insert at an index
         std.debug.assert(self.cursor.row <= self.total_line);
 
         const curr_idx = self.cursor.col;
@@ -150,7 +149,6 @@ pub const Buffer = struct {
     ///
     /// Asserts that the current line equals or less than the total line
     pub fn remove(self: *Buffer, alloc: std.mem.Allocator) !void {
-        // TODO: remove at an index
         std.debug.assert(self.cursor.row <= self.total_line);
         if (self.cursor.row == 0 and self.lines.items[self.cursor.row].items.len == 0) return;
 
@@ -176,7 +174,6 @@ pub const Buffer = struct {
     /// Add and move to the new line.
     pub fn newLine(self: *Buffer, alloc: std.mem.Allocator) !void {
         try self.lines.append(alloc, .empty);
-        std.log.debug("num of line: {d}", .{self.lines.items.len});
         self.total_line += 1;
         self.cursor.row = self.lines.items.len - 1;
         self.cursor.col = 0;
