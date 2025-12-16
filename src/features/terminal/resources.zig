@@ -5,7 +5,6 @@ const Language = @import("../interpreter/Interpreter.zig").Language;
 
 pub const State = struct {
     is_focused: bool = false,
-    ts_backspace: i64 = 0,
     frame_counter: usize = 0,
     lang: Language = .plaintext,
     lang_box_is_opened: bool = false,

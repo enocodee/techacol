@@ -20,23 +20,50 @@ pub fn handleKeys(
     alloc: std.mem.Allocator,
     grid: Grid,
     buf: *Buffer,
-    ts_backspace: *i64,
 ) !void {
-    _ = ts_backspace;
     if (try handleTyping(alloc, grid, buf)) return;
 
-    // TODO: handle key combination and key holding
+    try handleBackspace(alloc, grid, buf);
+    handleCursor(buf);
+
+    // TODO: handle key combination
     const pressed = rl.getKeyPressed();
     if (pressed != .null) {
         switch (pressed) {
-            .backspace => try buf.remove(alloc, grid),
             .enter => try buf.newLine(alloc, grid),
-            .left => buf.seek(.left),
-            .right => buf.seek(.right),
-            .up => buf.seek(.up),
-            .down => buf.seek(.down),
             else => {},
         }
+    }
+}
+
+fn handleBackspace(alloc: std.mem.Allocator, grid: Grid, buf: *Buffer) !void {
+    if (rl.isKeyPressedRepeat(.backspace) or
+        rl.isKeyPressed(.backspace))
+    {
+        try buf.remove(alloc, grid);
+    }
+}
+
+fn handleCursor(buf: *Buffer) void {
+    if (rl.isKeyPressedRepeat(.left) or
+        rl.isKeyPressed(.left))
+    {
+        buf.seek(.left);
+    }
+    if (rl.isKeyPressedRepeat(.right) or
+        rl.isKeyPressed(.right))
+    {
+        buf.seek(.right);
+    }
+    if (rl.isKeyPressedRepeat(.up) or
+        rl.isKeyPressed(.up))
+    {
+        buf.seek(.up);
+    }
+    if (rl.isKeyPressedRepeat(.down) or
+        rl.isKeyPressed(.down))
+    {
+        buf.seek(.down);
     }
 }
 

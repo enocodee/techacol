@@ -59,7 +59,7 @@ pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
     const buf, const grid, _ = (try w.query(&.{ *Buffer, Grid, Terminal }))[0];
 
     if (state.is_focused)
-        try input.handleKeys(w.alloc, grid, buf, &state.ts_backspace);
+        try input.handleKeys(w.alloc, grid, buf);
 }
 
 pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
