@@ -19,10 +19,9 @@ pub fn build(w: *World) void {
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     w.spawnEntity(
-        &.{ Info, Box },
         .{
-            .{},
-            .{
+            Info{},
+            Box{
                 .x = 10,
                 .y = rl.getScreenHeight() - 100,
                 .font_size = 20,

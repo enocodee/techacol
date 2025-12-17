@@ -51,12 +51,12 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     const font_y: i32 = @intFromFloat(measure_font.y);
 
     // spawn the terminal background
-    w.spawnEntity(&.{ Terminal, Buffer, Position, Rectangle, Grid }, .{
-        .{},
-        try .init(w.alloc),
-        .{ .x = rl.getScreenWidth() - 300, .y = 10 },
-        .{ .width = 250, .height = 350, .color = .black },
-        .init(
+    w.spawnEntity(.{
+        Terminal{},
+        try Buffer.init(w.alloc),
+        Position{ .x = rl.getScreenWidth() - 300, .y = 10 },
+        Rectangle{ .width = 250, .height = 350, .color = .black },
+        Grid.init(
             w.alloc,
             5 + rl.getScreenWidth() - 300, // x
             15, // y
@@ -72,16 +72,16 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     });
 
     // spawn RUN button
-    w.spawnEntity(&.{ Terminal, Button, Position, Rectangle }, .{
-        .{},
-        .{ .content = "Run", .font = style.font },
-        .{ .x = (rl.getScreenWidth() - 300), .y = 360 },
-        .{ .width = 100, .height = 50, .color = .gray },
+    w.spawnEntity(.{
+        Terminal{},
+        Button{ .content = "Run", .font = style.font },
+        Position{ .x = (rl.getScreenWidth() - 300), .y = 360 },
+        Rectangle{ .width = 100, .height = 50, .color = .gray },
     });
 
     // the command executor
-    w.spawnEntity(&.{ Terminal, Executor }, .{
-        .{},
-        .init(w.alloc),
+    w.spawnEntity(.{
+        Terminal{},
+        Executor.init(w.alloc),
     });
 }

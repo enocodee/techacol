@@ -24,18 +24,12 @@ pub fn build(w: *World) void {
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     w.spawnEntity(
-        &.{
-            Digger,
-            Circle,
-            Position,
-            InGrid,
-        },
         .{
-            .{ .idx_in_grid = .{ .r = 0, .c = 0 } },
-            .{ .radius = 10, .color = .red },
-            .{ .x = 0, .y = 0 },
+            Digger{ .idx_in_grid = .{ .r = 0, .c = 0 } },
+            Circle{ .radius = 10, .color = .red },
+            Position{ .x = 0, .y = 0 },
             // TODO: grid entity should be `null` when initialized
-            .{ .grid_entity = 0 },
+            InGrid{ .grid_entity = 0 },
         },
     );
 }

@@ -111,13 +111,15 @@ pub fn newEntity(self: *World) EntityID {
 
 pub fn spawnEntity(
     self: *World,
-    comptime types: []const type,
-    values: std.meta.Tuple(types),
+    values: anytype,
 ) void {
+    if (@typeInfo(@TypeOf(values)) != .@"struct")
+        @compileError("Expected a tuple or struct, found " ++ @typeName(@TypeOf(values)));
+
     const id = self.newEntity();
 
-    inline for (types, 0..) |T, i| {
-        try self.setComponent(id, T, values[i]);
+    inline for (values) |v| {
+        try self.setComponent(id, @TypeOf(v), v);
     }
 }
 
@@ -474,18 +476,18 @@ test "get keys of min storage" {
     var w: World = .init(alloc);
     defer w.deinit();
 
-    w.spawnEntity(&.{ Position, Velocity }, .{
-        .{ .x = 1, .y = 2 },
-        .{ .x = 1, .y = 2 },
+    w.spawnEntity(.{
+        Position{ .x = 1, .y = 2 },
+        Velocity{ .x = 1, .y = 2 },
     });
 
-    w.spawnEntity(&.{ Position, Velocity }, .{
-        .{ .x = 1, .y = 2 },
-        .{ .x = 5, .y = 10 },
+    w.spawnEntity(.{
+        Position{ .x = 1, .y = 2 },
+        Velocity{ .x = 5, .y = 10 },
     });
 
-    w.spawnEntity(&.{Position}, .{
-        .{ .x = 1, .y = 2 },
+    w.spawnEntity(.{
+        Position{ .x = 1, .y = 2 },
     });
 
     const k1 = try w.getKeysOfMinStorage(&.{ Position, Velocity });
@@ -589,21 +591,21 @@ test "query" {
     var w: World = .init(alloc);
     defer w.deinit();
 
-    w.spawnEntity(&.{ Player, Position, Velocity }, .{
-        .{ .name = "test_player" },
-        .{ .x = 1, .y = 2 },
-        .{ .x = 1, .y = 2 },
+    w.spawnEntity(.{
+        Player{ .name = "test_player" },
+        Position{ .x = 1, .y = 2 },
+        Velocity{ .x = 1, .y = 2 },
     });
 
-    w.spawnEntity(&.{ Monster, Position, Velocity }, .{
-        .{ .name = "test_monster1" },
-        .{ .x = 1, .y = 2 },
-        .{ .x = 5, .y = 10 },
+    w.spawnEntity(.{
+        Monster{ .name = "test_monster1" },
+        Position{ .x = 1, .y = 2 },
+        Velocity{ .x = 5, .y = 10 },
     });
 
-    w.spawnEntity(&.{ Monster, Position }, .{
-        .{ .name = "test_monster2" },
-        .{ .x = 1, .y = 2 },
+    w.spawnEntity(.{
+        Monster{ .name = "test_monster2" },
+        Position{ .x = 1, .y = 2 },
     });
 
     const queries = try query(w, &.{ Position, *Velocity });

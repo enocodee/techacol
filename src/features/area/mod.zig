@@ -14,8 +14,7 @@ pub fn build(w: *World) void {
 
 pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     w.spawnEntity(
-        &.{ Area, Grid },
-        .{ .{}, .init(
+        .{ Area{}, Grid.init(
             w.alloc,
             0,
             0,
