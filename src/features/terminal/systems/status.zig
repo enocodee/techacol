@@ -6,7 +6,8 @@ const input = @import("input.zig");
 
 const World = @import("ecs").World;
 const Terminal = @import("../mod.zig").Terminal;
-const Executor = @import("../components.zig").CommandExecutor;
+const Buffer = @import("../mod.zig").Buffer;
+const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
@@ -14,7 +15,6 @@ const Button = ecs_common.Button;
 const Grid = ecs_common.Grid;
 
 const State = resource.State;
-const Buffer = resource.Buffer;
 
 pub fn inHover(w: *World, _: std.mem.Allocator) !void {
     const queries = try w.query(&.{
@@ -56,24 +56,16 @@ pub fn inWindowResizing(w: *World, _: std.mem.Allocator) !void {
 
 pub fn inFocused(w: *World, _: std.mem.Allocator) !void {
     const state = try w.getMutResource(State);
-    const buf = try w.getMutResource(Buffer);
-    const grid = (try w.query(&.{ Grid, Terminal }))[0][0];
+    const buf, const grid, _ = (try w.query(&.{ *Buffer, Grid, Terminal }))[0];
 
-    if (state.is_focused) {
-        try input.scan(
-            buf.chars,
-            grid.num_of_cols,
-            &buf.char_count,
-            @intCast(buf.capacity),
-            &state.ts_backspace,
-        );
-    }
+    if (state.is_focused)
+        try input.handleKeys(w.alloc, grid, buf);
 }
 
 pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
     const state = try w.getResource(State);
     const pos, const rec, _, _ = (try w.query(&.{ Position, Rectangle, Button, Terminal }))[0];
-    const buf = try w.getResource(Buffer);
+    const buf, _ = (try w.query(&.{ Buffer, Terminal }))[0];
 
     if (rl.checkCollisionPointRec(
         rl.getMousePosition(),
@@ -85,10 +77,13 @@ pub fn inClickedRun(w: *World, _: std.mem.Allocator) !void {
         },
     )) {
         if (rl.isMouseButtonPressed(.left) and state.active) {
+            const content = try buf.toString(w.alloc);
+            defer w.alloc.free(content);
+
             try input.process(
                 w,
                 w.alloc,
-                buf.chars[0..@intCast(buf.char_count)],
+                content,
                 @enumFromInt(state.selected_lang),
             );
         }

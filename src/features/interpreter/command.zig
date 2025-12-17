@@ -31,7 +31,7 @@ pub const Command = union(enum) {
     pub const CondExpr = union(enum) {
         /// This field using for comparision operators
         /// (!=, >, < <=, >=, ==)
-        number_literal: isize,
+        number_literal: usize,
         /// if(true) {...}
         /// if(false) {...}
         ///

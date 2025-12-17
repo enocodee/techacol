@@ -143,13 +143,9 @@ pub fn parse(
     if (self.errors.items.len > 0) {
         var aw = std.Io.Writer.Allocating.init(alloc);
         defer aw.deinit();
-        const errs = try self.errors.toOwnedSlice(alloc);
-        defer {
-            alloc.free(errs);
-            self.errors.deinit(alloc);
-        }
+        defer self.errors.deinit(alloc);
 
-        for (errs) |*err| {
+        for (self.errors.items) |*err| {
             try err.render(&aw.writer);
             defer err.deinit(alloc);
 

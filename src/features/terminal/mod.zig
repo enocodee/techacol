@@ -10,13 +10,13 @@ const Button = ecs_common.Button;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
-const Buffer = resources.Buffer;
 const State = resources.State;
 const Style = resources.Style;
 
-const Executor = components.CommandExecutor;
 const GameAssets = @import("../../GameAssets.zig");
+const Executor = @import("../command_executor/mod.zig").CommandExecutor;
 
+pub const Buffer = components.Buffer;
 pub const Terminal = components.Terminal;
 
 pub fn build(w: *World) void {
@@ -24,7 +24,6 @@ pub fn build(w: *World) void {
     const font = assets.getTerminalFont() catch @panic("Cannot load terminal font");
 
     _ = w
-        .addResource(Buffer, .init(w.alloc, 29 * 40))
         .addResource(Style, .{ .font = font, .font_size = 20 })
         .addResource(State, .{})
         .addSystem(.startup, spawn)
@@ -52,13 +51,9 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
     const font_y: i32 = @intFromFloat(measure_font.y);
 
     // spawn the terminal background
-    w.spawnEntity(&.{
-        Terminal,
-        Position,
-        Rectangle,
-        Grid,
-    }, .{
+    w.spawnEntity(&.{ Terminal, Buffer, Position, Rectangle, Grid }, .{
         .{},
+        try .init(w.alloc),
         .{ .x = rl.getScreenWidth() - 300, .y = 10 },
         .{ .width = 250, .height = 350, .color = .black },
         .init(
@@ -72,7 +67,7 @@ pub fn spawn(w: *World, _: std.mem.Allocator) !void {
             font_y, // height
             .red,
             2, // gap
-            .none,
+            .line,
         ),
     });
 
