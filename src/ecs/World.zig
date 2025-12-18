@@ -142,6 +142,7 @@ fn extractComponent(
     }
 }
 
+/// Flatten all components in `Bundle` and add to the entity
 fn extractBundleComponent(
     self: *World,
     id: EntityID,
