@@ -464,19 +464,19 @@ test "query" {
     var w: World = .init(alloc);
     defer w.deinit();
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Player{ .name = "test_player" },
         Position{ .x = 1, .y = 2 },
         Velocity{ .x = 1, .y = 2 },
     });
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Monster{ .name = "test_monster1" },
         Position{ .x = 1, .y = 2 },
         Velocity{ .x = 5, .y = 10 },
     });
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Monster{ .name = "test_monster2" },
         Position{ .x = 1, .y = 2 },
     });
