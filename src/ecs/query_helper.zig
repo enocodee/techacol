@@ -132,21 +132,21 @@ test "get keys of min storage" {
     var w: World = .init(alloc);
     defer w.deinit();
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Position{ .x = 1, .y = 2 },
         Velocity{ .x = 1, .y = 2 },
     });
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Position{ .x = 1, .y = 2 },
         Velocity{ .x = 5, .y = 10 },
     });
 
-    w.spawnEntity(.{
+    _ = w.spawnEntity(.{
         Position{ .x = 1, .y = 2 },
     });
 
-    const k1 = try w.getKeysOfMinStorage(&.{ Position, Velocity });
+    const k1 = try getKeysOfMinStorage(w, &.{ Position, Velocity });
 
     try std.testing.expectEqual(1, k1.idx);
     try std.testing.expectEqualSlices(u64, &.{ 1, 0 }, k1.items);
@@ -155,7 +155,7 @@ test "get keys of min storage" {
     const Weapon = struct { name: []const u8 };
     try w.setComponent(1, Weapon, .{ .name = "sword" });
 
-    const k2 = try w.getKeysOfMinStorage(&.{ Position, Velocity, Weapon });
+    const k2 = try getKeysOfMinStorage(w, &.{ Position, Velocity, Weapon });
 
     try std.testing.expectEqual(2, k2.idx);
     try std.testing.expectEqualSlices(u64, &.{1}, k2.items);
