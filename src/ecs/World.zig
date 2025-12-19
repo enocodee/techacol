@@ -404,6 +404,7 @@ pub fn run(self: *World) !void {
 
 pub const QueryError = error{OutOfMemory} || GetComponentError;
 /// Fetch all entities that have **all** of the speicifed component types.
+/// Return a slice of tuples, each tuple being a group of values of an entity.
 ///
 /// # Examples:
 /// ```zig
