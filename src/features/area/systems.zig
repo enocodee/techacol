@@ -4,15 +4,16 @@ const rl = @import("raylib");
 
 const GameAssets = @import("../../GameAssets.zig");
 const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 const Area = @import("components.zig").Area;
 
 pub fn render(
-    w: *World,
+    res_assets: Resource(*GameAssets),
     queries: Query(&.{ Grid, Area }),
 ) !void {
-    const assets = try w.getMutResource(GameAssets);
+    const assets = res_assets.result;
     const font = try assets.getMainFont();
 
     for (queries.many()) |query| {

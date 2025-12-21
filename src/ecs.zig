@@ -12,6 +12,8 @@ pub const CommonModule = common.CommonModule;
 pub const query = struct {
     pub const Query = @import("ecs/query.zig").Query;
     pub const QueryError = @import("ecs/query.zig").QueryError;
+
+    pub const Resource = @import("ecs/resource.zig").Resource;
 };
 
 test {

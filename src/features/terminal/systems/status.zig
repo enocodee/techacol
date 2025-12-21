@@ -6,6 +6,7 @@ const ecs_common = ecs.common;
 const input = @import("input.zig");
 
 const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
 const World = ecs.World;
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
@@ -20,10 +21,10 @@ const Grid = ecs_common.Grid;
 const State = resource.State;
 
 pub fn inHover(
-    w: *World,
+    res_state: Resource(*State),
     queries: Query(&.{ Position, Rectangle, Terminal }),
 ) !void {
-    const state = try w.getMutResource(State);
+    const state = res_state.result;
     const pos, const rec, _ = queries.single();
 
     const is_hovered = rl.checkCollisionPointRec(rl.getMousePosition(), .{
@@ -56,20 +57,23 @@ pub fn inWindowResizing(
     }
 }
 
-pub fn inFocused(w: *World, queries: Query(&.{ *Buffer, Grid, Terminal })) !void {
-    const state = try w.getMutResource(State);
+pub fn inFocused(
+    alloc: std.mem.Allocator,
+    res_state: Resource(State),
+    queries: Query(&.{ *Buffer, Grid, Terminal }),
+) !void {
     const buf, const grid, _ = queries.single();
 
-    if (state.is_focused)
-        try input.handleKeys(w.alloc, grid, buf);
+    if (res_state.result.is_focused)
+        try input.handleKeys(alloc, grid, buf);
 }
 
 pub fn inClickedRun(
     w: *World,
+    res_state: Resource(State),
     child_queries: Query(&.{ @import("ecs").common.Children, Terminal }),
     buf_queries: Query(&.{ Buffer, Terminal }),
 ) !void {
-    const state = try w.getResource(State);
     const child = child_queries.single()[0];
     // TODO: handle query children components
     const rec, const pos =
@@ -88,7 +92,7 @@ pub fn inClickedRun(
             .height = @floatFromInt(rec.height),
         },
     )) {
-        if (rl.isMouseButtonPressed(.left) and state.active) {
+        if (rl.isMouseButtonPressed(.left) and res_state.result.active) {
             const content = try buf.toString(w.alloc);
             defer w.alloc.free(content);
 
@@ -96,7 +100,7 @@ pub fn inClickedRun(
                 w,
                 w.alloc,
                 content,
-                @enumFromInt(state.selected_lang),
+                @enumFromInt(res_state.result.selected_lang),
             );
         }
     }

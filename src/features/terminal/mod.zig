@@ -6,6 +6,7 @@ const systems = @import("systems.zig");
 const components = @import("components.zig");
 
 const World = @import("ecs").World;
+const Resourse = @import("ecs").query.Resource;
 const Button = ecs_common.Button;
 const ButtonBundle = ecs_common.ButtonBundle;
 const Rectangle = ecs_common.Rectangle;
@@ -42,8 +43,8 @@ pub fn build(w: *World) void {
     });
 }
 
-pub fn spawn(w: *World) !void {
-    const style = try w.getResource(Style);
+pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
+    const style = res_style.result;
     const measure_font = rl.measureTextEx(
         style.font,
         "a",

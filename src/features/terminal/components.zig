@@ -11,8 +11,6 @@ const Command = @import("../interpreter/command.zig").Command;
 const State = @import("resources.zig").State;
 const Style = @import("resources.zig").Style;
 
-const QueryError = @import("ecs").World.QueryError;
-
 pub const TerminalBundle = struct {
     term: Terminal = .{},
     pos: ecs_common.Position,

@@ -5,6 +5,7 @@ const ecs_common = ecs.common;
 
 const World = ecs.World;
 const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
 const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
 const InGrid = ecs_common.InGrid;
@@ -27,10 +28,11 @@ pub fn updatePos(w: *World, queries: Query(&.{ *Position, InGrid, Point })) !voi
 
 pub fn updateScore(
     w: *World,
+    res_score: Resource(*Score),
     point_queries: Query(&.{ *Point, InGrid }),
     digger_queries: Query(&.{Digger}),
 ) !void {
-    const score = try w.getMutResource(Score);
+    const score = res_score.result;
     const point: *Point, const in_grid = point_queries.single();
     const grid = (try w.entity(in_grid.grid_entity).getComponents(&.{Grid}))[0];
 

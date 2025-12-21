@@ -10,6 +10,7 @@ const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 
 const Query = ecs.query.Query;
+const Resource = ecs.query.Resource;
 const World = ecs.World;
 const Grid = @import("ecs").common.Grid;
 const Rectangle = ecs_common.Rectangle;
@@ -19,9 +20,13 @@ const Button = ecs_common.Button;
 const Style = resource.Style;
 const State = resource.State;
 
-pub fn render(w: *World, queries: Query(&.{ Grid, Buffer, Position, Rectangle, Terminal })) !void {
-    const style = try w.getResource(Style);
-    const state = try w.getMutResource(State);
+pub fn render(
+    res_style: Resource(Style),
+    res_state: Resource(*State),
+    queries: Query(&.{ Grid, Buffer, Position, Rectangle, Terminal }),
+) !void {
+    const state = res_state.result;
+    const style = res_style.result;
 
     for (queries.many()) |q| {
         const grid, const buf, const pos, const rec, _ = q;
