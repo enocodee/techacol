@@ -103,11 +103,10 @@ pub fn spawnEntity(
     self: *World,
     values: anytype,
 ) Entity {
-    const type_info = @typeInfo(@TypeOf(values));
+    const T = ecs_util.Deref(@TypeOf(values));
     const id = self.newEntity();
 
-    const fields = type_info.@"struct".fields;
-    inline for (fields) |f| {
+    inline for (std.meta.fields(T)) |f| {
         try self.extractComponent(id, f.type, @field(values, f.name));
     }
 
