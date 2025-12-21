@@ -2,7 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 
 const digger_mod = @import("features/digger/mod.zig");
-const area_mod = @import("features/area/mod.zig");
+const region_mod = @import("features/region/mod.zig");
 const terminal_mod = @import("features/terminal/mod.zig");
 const debug_mod = @import("features/debug/mod.zig");
 const score_mod = @import("features/score/mod.zig");
@@ -29,7 +29,7 @@ fn loop(alloc: std.mem.Allocator) !void {
         .addResource(GameAssets, .{})
         .addSystems(.update, &.{closeWindow})
         .addModules(&.{
-            area_mod,
+            region_mod,
             terminal_mod,
             digger_mod,
             score_mod,

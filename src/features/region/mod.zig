@@ -4,7 +4,7 @@ const systems = @import("systems.zig");
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 
-const Area = @import("components.zig").Area;
+const Region = @import("components.zig").Region;
 
 pub fn build(w: *World) void {
     _ = w
@@ -24,5 +24,5 @@ pub fn spawn(w: *World, alloc: std.mem.Allocator) !void {
     };
     grid.initCells(alloc, 0, 0);
 
-    _ = w.spawnEntity(.{ Area{}, grid });
+    _ = w.spawnEntity(.{ Region{}, grid });
 }
