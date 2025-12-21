@@ -4,12 +4,10 @@ const rl = @import("raylib");
 const World = @import("../../World.zig");
 const Grid = @import("components.zig").Grid;
 
-const queryToRender = @import("../utils.zig").queryToRender;
+const QueryToRender = @import("../utils.zig").QueryToRender;
 
-pub fn renderGrid(w: *World, _: std.mem.Allocator) !void {
-    const queries = (try queryToRender(w, &.{Grid})) orelse return;
-
-    for (queries) |q| {
+pub fn renderGrid(queries: QueryToRender(&.{Grid})) !void {
+    for (queries.many()) |q| {
         const grid = q[0];
 
         switch (grid.render_mode) {

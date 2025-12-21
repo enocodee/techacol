@@ -1,7 +1,7 @@
 const std = @import("std");
 const common = @import("common.zig");
 const utils = @import("util.zig");
-const query_helper = @import("query_helper.zig");
+const query_helper = @import("query.zig");
 
 const World = @import("World.zig");
 

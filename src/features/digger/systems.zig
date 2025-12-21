@@ -1,8 +1,10 @@
 const std = @import("std");
 const rl = @import("raylib");
-const ecs_common = @import("ecs").common;
+const ecs = @import("ecs");
+const ecs_common = ecs.common;
 
-const World = @import("ecs").World;
+const World = ecs.World;
+const Query = ecs.query.Query;
 const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
 const InGrid = ecs_common.InGrid;
@@ -10,13 +12,15 @@ const InGrid = ecs_common.InGrid;
 const Digger = @import("mod.zig").Digger;
 
 /// Draw all diggers
-pub fn updatePos(w: *World) !void {
-    const queries = try w.query(&.{ *Position, InGrid, Digger });
-
-    for (queries) |query| {
+pub fn updatePos(
+    w: *World,
+    queries: Query(&.{ *Position, InGrid, Digger }),
+) !void {
+    for (queries.many()) |query| {
         const pos, const in_grid, const digger = query;
         const idx_in_grid = digger.idx_in_grid;
-        const grid = try w.getComponent(in_grid.grid_entity, Grid);
+        // TODO: can we reduce boilerplate?
+        const grid = (try w.entity(in_grid.grid_entity).getComponents(&.{Grid}))[0];
 
         const pos_in_px = grid.matrix[@intCast(try grid.getActualIndex(idx_in_grid.r, idx_in_grid.c))];
         pos.x = pos_in_px.x + @divTrunc(grid.cell_width, 2);

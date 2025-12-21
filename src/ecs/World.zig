@@ -13,7 +13,7 @@ const resource = @import("resource.zig");
 
 const ecs_util = @import("util.zig");
 const ecs_common = @import("common.zig");
-const query_helper = @import("query_helper.zig");
+const _query = @import("query.zig");
 const system = @import("system.zig");
 
 const ErasedComponentStorage = component.ErasedStorage;
@@ -399,56 +399,13 @@ pub fn run(self: *World) !void {
     }
 }
 
-pub const QueryError = error{OutOfMemory} || GetComponentError;
-/// Fetch all entities that have **all** of the speicifed component types.
-/// Return a slice of tuples, each tuple being a group of values of an entity.
-///
-/// # Examples:
-/// ```zig
-/// var result = try query(&.{Position, Velocity})
-/// for (result) |entity| {
-///     const pos: Position, const vec: Velocity = entity;
-///     ...
-/// }
-/// ```
-///
-/// This function should be used in `systems` (called in every frame),
-/// so we can ensure that all allocated things will be freed at the
-/// end of the frame.
-// TODO: query filter
 pub fn query(
     self: World,
     comptime types: []const type,
-) QueryError![]std.meta.Tuple(types) {
-    const alloc = self.arena.allocator();
-    // Temporary list containing entity ids for each component storage
-    var temp_list: std.ArrayList(Entity.ID) = .empty;
-    const min_storage = try query_helper.getKeysOfMinStorage(self, types);
-    // init the result with the storage containing the fewest elements
-    var result_list: std.ArrayList(Entity.ID) = .fromOwnedSlice(min_storage.items);
-
-    inline for (types, 0..) |T, i| {
-        // use label to control flow in comptime
-        skip_min: {
-            // skip the min_storage because its available
-            // in the result list
-            if (i == min_storage.idx) break :skip_min;
-
-            const Type = ecs_util.Deref(T);
-            const s = try ErasedComponentStorage.cast(self, Type);
-
-            var data_iter = s.data.keyIterator();
-            while (data_iter.next()) |it| {
-                try temp_list.append(alloc, it.*);
-            }
-            try query_helper.findMatch(alloc, &result_list, temp_list);
-
-            // reset l1
-            temp_list.clearAndFree(alloc);
-        }
-    }
-
-    return query_helper.tuplesFromTypes(self, result_list.items, types);
+) !_query.Query(types) {
+    var query_executor: _query.Query(types) = .{};
+    try query_executor.query(self);
+    return query_executor;
 }
 
 test "query" {
@@ -478,7 +435,7 @@ test "query" {
         Position{ .x = 1, .y = 2 },
     });
 
-    const queries = try query(w, &.{ Position, *Velocity });
+    const queries = (try query(w, &.{ Position, *Velocity })).many();
 
     try std.testing.expect(queries.len == 2);
 
@@ -498,13 +455,13 @@ test "query" {
     vec_1.*.x += 1; // changes value
 
     // get again to see if the value was changed
-    const queries2 = try query(w, &.{ Position, Velocity });
+    const queries2 = (try query(w, &.{ Position, Velocity })).many();
 
     const pos_2: Position, const vec_2: Velocity = queries2[1];
     try std.testing.expect(pos_2.x == 1);
     try std.testing.expect(vec_2.x == 2);
 
-    const player_queries = try query(w, &.{ Player, *Position });
+    const player_queries = (try query(w, &.{ Player, *Position })).many();
     try std.testing.expectEqual(1, player_queries.len);
 
     const player, const player_pos = player_queries[0];
@@ -512,7 +469,7 @@ test "query" {
     try std.testing.expectEqualSlices(u8, "test_player", player.name);
     try std.testing.expectEqual(player_pos.x, 2);
 
-    const monster_queries = try query(w, &.{ Monster, Position });
+    const monster_queries = (try query(w, &.{ Monster, Position })).many();
     try std.testing.expectEqual(2, monster_queries.len);
 
     const monster1, _ = monster_queries[0];

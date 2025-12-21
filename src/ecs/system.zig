@@ -29,7 +29,18 @@ pub fn systemHandler(comptime system: anytype) Handler {
                     *World => args[i] = w,
                     *Arena => args[i] = w.arena,
                     Allocator => args[i] = w.alloc,
-                    else => unreachable,
+                    else => {
+                        const T = param.type.?;
+                        if (T == World) continue;
+
+                        // Query(...)
+                        // NOTE: This allow custom query functions
+                        if (@hasDecl(T, "query")) {
+                            var obj: T = .{};
+                            try obj.query(w.*);
+                            args[i] = obj;
+                        }
+                    },
                 }
             }
 

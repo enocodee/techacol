@@ -4,7 +4,7 @@ const rl = @import("raylib");
 const World = @import("../World.zig");
 const Position = @import("position.zig").Position;
 
-const queryToRender = @import("utils.zig").queryToRender;
+const QueryToRender = @import("utils.zig").QueryToRender;
 
 pub const Bundle = struct {
     circle: Circle,
@@ -16,13 +16,8 @@ pub const Circle = struct {
     color: rl.Color,
 };
 
-pub fn render(w: *World, _: std.mem.Allocator) !void {
-    const queries = (try queryToRender(w, &.{
-        Position,
-        Circle,
-    })) orelse return;
-
-    for (queries) |query| {
+pub fn render(queries: QueryToRender(&.{ Position, Circle })) !void {
+    for (queries.many()) |query| {
         const pos, const cir = query;
         rl.drawCircle(
             pos.x,

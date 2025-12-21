@@ -38,7 +38,7 @@ pub fn control(w: *World, move_direction: MoveDirection) !void {
     var digger, const in_grid = (try w.query(&.{
         *Digger,
         InGrid,
-    }))[0];
+    })).single();
     const grid = try w.getComponent(in_grid.grid_entity, Grid);
 
     move(&digger.idx_in_grid, grid, move_direction);

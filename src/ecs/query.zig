@@ -5,6 +5,89 @@ const ErasedComponentStorage = @import("component.zig").ErasedStorage;
 const World = @import("World.zig");
 const EntityID = @import("Entity.zig").ID;
 
+pub const QueryError = error{OutOfMemory} || World.GetComponentError;
+
+pub fn Query(comptime types: []const type) type {
+    return struct {
+        result: []Tuple = &.{},
+
+        pub const Result = []Tuple;
+        pub const Tuple = std.meta.Tuple(types);
+        const Self = @This();
+
+        /// Fetch all entities that have **all** of the speicifed component types.
+        /// Return a slice of tuples, each tuple being a group of values of an entity.
+        ///
+        /// # Examples:
+        /// Query directly:
+        /// ---
+        /// ```zig
+        /// const query = try Query(&.{Position, Velocity}).query();
+        /// const result = query.result; // get the result
+        /// for (result) |entity| {
+        ///     const pos: Position, const vec: Velocity = entity;
+        ///     ...
+        /// }
+        /// ```
+        /// ---
+        /// or you can define the type in systems as arguments:
+        /// ---
+        /// ```zig
+        /// fn yourSystem(queries: Query(&.{Position, Velocity})) !void {
+        ///     const result = queries.result;
+        ///     // do something
+        /// }
+        /// ```
+        /// ---
+        ///
+        /// This function should be used in `systems` (called in every frame),
+        /// so we can ensure that all allocated things will be freed at the
+        /// end of the frame.
+        // TODO: query filter
+        pub fn query(self: *Self, w: World) QueryError!void {
+            const alloc = w.arena.allocator();
+            // Temporary list containing entity ids for each component storage
+            var temp_list: std.ArrayList(EntityID) = .empty;
+            const min_storage = try getKeysOfMinStorage(w, types);
+            // init the result with the storage containing the fewest elements
+            var result_list: std.ArrayList(EntityID) = .fromOwnedSlice(min_storage.items);
+
+            inline for (types, 0..) |T, i| {
+                // use label to control flow in comptime
+                skip_min: {
+                    // skip the min_storage because its available
+                    // in the result list
+                    if (i == min_storage.idx) break :skip_min;
+
+                    const Type = ecs_util.Deref(T);
+                    const s = try ErasedComponentStorage.cast(w, Type);
+
+                    var data_iter = s.data.keyIterator();
+                    while (data_iter.next()) |it| {
+                        try temp_list.append(alloc, it.*);
+                    }
+                    try findMatch(alloc, &result_list, temp_list);
+
+                    // reset l1
+                    temp_list.clearAndFree(alloc);
+                }
+            }
+
+            self.result = try tuplesFromTypes(w, result_list.items, types);
+        }
+
+        /// return the first result element
+        pub fn single(self: Self) Tuple {
+            return self.result[0];
+        }
+
+        // return all result elements
+        pub fn many(self: Self) []Tuple {
+            return self.result;
+        }
+    };
+}
+
 /// Matching enittiy ids between `l1` and `l2`.
 /// The result will be written to l1 and the order of
 /// elements following `l1`.

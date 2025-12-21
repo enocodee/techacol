@@ -29,7 +29,7 @@ pub fn isEdge(w: *World, edge_direciton: EdgeDirection) !bool {
     var digger, const in_grid = (try w.query(&.{
         *Digger,
         InGrid,
-    }))[0];
+    })).single();
     const grid = try w.getComponent(in_grid.grid_entity, Grid);
 
     return isEdgeInternal(&digger.idx_in_grid, grid, edge_direciton);

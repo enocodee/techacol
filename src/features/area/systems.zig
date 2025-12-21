@@ -1,17 +1,21 @@
 const std = @import("std");
+const ecs = @import("ecs");
 const rl = @import("raylib");
 
 const GameAssets = @import("../../GameAssets.zig");
+const Query = ecs.query.Query;
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 const Area = @import("components.zig").Area;
 
-pub fn render(w: *World) !void {
+pub fn render(
+    w: *World,
+    queries: Query(&.{ Grid, Area }),
+) !void {
     const assets = try w.getMutResource(GameAssets);
-    const queries = try w.query(&.{ Grid, Area });
     const font = try assets.getMainFont();
 
-    for (queries) |query| {
+    for (queries.many()) |query| {
         const grid = query[0]; // get "grid" field
 
         for (grid.matrix, 0..) |cell, i| {

@@ -5,6 +5,7 @@ const ecs = @import("ecs");
 const ecs_common = ecs.common;
 const input = @import("input.zig");
 
+const Query = ecs.query.Query;
 const World = ecs.World;
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
@@ -18,14 +19,12 @@ const Grid = ecs_common.Grid;
 
 const State = resource.State;
 
-pub fn inHover(w: *World) !void {
-    const queries = try w.query(&.{
-        Position,
-        Rectangle,
-        Terminal,
-    });
+pub fn inHover(
+    w: *World,
+    queries: Query(&.{ Position, Rectangle, Terminal }),
+) !void {
     const state = try w.getMutResource(State);
-    const pos, const rec, _ = queries[0];
+    const pos, const rec, _ = queries.single();
 
     const is_hovered = rl.checkCollisionPointRec(rl.getMousePosition(), .{
         .x = @floatFromInt(pos.x),
@@ -43,12 +42,13 @@ pub fn inHover(w: *World) !void {
     }
 }
 
-pub fn inWindowResizing(w: *World) !void {
-    const queries = try w.query(&.{ *Position, Terminal });
-    const btn_queries = try w.query(&.{ *Position, Button });
+pub fn inWindowResizing(
+    q_terminal_pos: Query(&.{ *Position, Terminal }),
+    q_btn: Query(&.{ *Position, Button }),
+) !void {
+    const pos, _ = q_terminal_pos.single();
+    const btn_pos, _ = q_btn.single();
 
-    const pos, _ = queries[0];
-    const btn_pos, _ = btn_queries[0];
     if (rl.isWindowResized()) {
         pos.x = rl.getScreenWidth() - 300;
         btn_pos.y = pos.y + 350;
@@ -56,27 +56,28 @@ pub fn inWindowResizing(w: *World) !void {
     }
 }
 
-pub fn inFocused(w: *World) !void {
+pub fn inFocused(w: *World, queries: Query(&.{ *Buffer, Grid, Terminal })) !void {
     const state = try w.getMutResource(State);
-    const buf, const grid, _ = (try w.query(&.{ *Buffer, Grid, Terminal }))[0];
+    const buf, const grid, _ = queries.single();
 
     if (state.is_focused)
         try input.handleKeys(w.alloc, grid, buf);
 }
 
-pub fn inClickedRun(w: *World) !void {
+pub fn inClickedRun(
+    w: *World,
+    child_queries: Query(&.{ @import("ecs").common.Children, Terminal }),
+    buf_queries: Query(&.{ Buffer, Terminal }),
+) !void {
     const state = try w.getResource(State);
-    const child = (try w.query(&.{
-        @import("ecs").common.Children,
-        Terminal,
-    }))[0][0];
+    const child = child_queries.single()[0];
     // TODO: handle query children components
     const rec, const pos =
         (try w
             .entity(child.id)
             .getComponents(&.{ Rectangle, Position }));
 
-    const buf, _ = (try w.query(&.{ Buffer, Terminal }))[0];
+    const buf, _ = buf_queries.single();
 
     if (rl.checkCollisionPointRec(
         rl.getMousePosition(),
@@ -101,10 +102,14 @@ pub fn inClickedRun(w: *World) !void {
     }
 }
 
-pub fn inCmdRunning(w: *World) !void {
+pub fn inCmdRunning(
+    w: *World,
+    q_child: Query(&.{ Children, Terminal }),
+    q_executor: Query(&.{ Executor, Terminal }),
+) !void {
     const state = try w.getMutResource(State);
-    const executor = (try w.query(&.{ Executor, Terminal }))[0][0];
-    const child = (try w.query(&.{ Children, Terminal }))[0][0];
+    const executor = q_executor.single()[0];
+    const child = q_child.single()[0];
     const run_btn = (try w.entity(child.id).getComponents(&.{*Button}))[0];
 
     state.*.active = !executor.is_running;

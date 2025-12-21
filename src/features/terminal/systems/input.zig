@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const ecs = @import("ecs");
 const digger = @import("../../digger/mod.zig");
 const utils = @import("../utils.zig");
 
@@ -7,12 +8,16 @@ const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 const Interpreter = @import("../../interpreter/Interpreter.zig");
+const Query = ecs.query.Query;
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 
 /// Running all available cmds in queue
-pub fn execCmds(w: *World) !void {
-    const executor = (try w.query(&.{ *Executor, Terminal }))[0][0];
+pub fn execCmds(
+    w: *World,
+    queries: Query(&.{ *Executor, Terminal }),
+) !void {
+    const executor = queries.single()[0];
     try executor.execNext(w, 1000);
 }
 
@@ -91,7 +96,7 @@ pub fn process(
     content: []const u8,
     lang: Interpreter.Language,
 ) !void {
-    var executor = (try w.query(&.{ *Executor, Terminal }))[0][0];
+    var executor = (try w.query(&.{ *Executor, Terminal })).single()[0];
     var interpreter: Interpreter = .{};
 
     const cmds = try interpreter.parse(alloc, content, lang);
