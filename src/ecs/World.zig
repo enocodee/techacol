@@ -104,8 +104,6 @@ pub fn spawnEntity(
     values: anytype,
 ) Entity {
     const type_info = @typeInfo(@TypeOf(values));
-    if (type_info != .@"struct")
-        @compileError("Expected a tuple or struct, found " ++ @typeName(@TypeOf(values)));
     const id = self.newEntity();
 
     const fields = type_info.@"struct".fields;
