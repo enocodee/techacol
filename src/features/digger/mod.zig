@@ -7,7 +7,7 @@ const Grid = ecs_common.Grid;
 const InGrid = ecs_common.InGrid;
 const World = @import("ecs").World;
 
-const Area = @import("../area/components.zig").Area;
+const Region = @import("../region/components.zig").Region;
 const DiggerBundle = @import("components.zig").DiggerBundle;
 
 pub const Digger = @import("components.zig").Digger;

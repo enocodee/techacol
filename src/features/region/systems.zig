@@ -7,13 +7,13 @@ const Query = ecs.query.Query;
 const Resource = ecs.query.Resource;
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
-const Area = @import("components.zig").Area;
+const Region = @import("components.zig").Region;
 
 const With = ecs.query.With;
 
 pub fn render(
     res_assets: Resource(*GameAssets),
-    queries: Query(&.{ Grid, With(&.{Area}) }),
+    queries: Query(&.{ Grid, With(&.{Region}) }),
 ) !void {
     const assets = res_assets.result;
     const font = try assets.getMainFont();
