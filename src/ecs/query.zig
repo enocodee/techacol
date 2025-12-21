@@ -7,13 +7,95 @@ const EntityID = @import("Entity.zig").ID;
 
 pub const QueryError = error{OutOfMemory} || World.GetComponentError;
 
+pub fn With(comptime types: []const type) type {
+    return QueryFilter(.with, types);
+}
+
+const QueryFilterKind = enum {
+    with,
+};
+
+pub fn QueryFilter(comptime kind: QueryFilterKind, comptime types: []const type) type {
+    return struct {
+        // NOTE: define a field to determine which the filter is used.
+        _kind: QueryFilterKind = kind,
+
+        // NOTE: avoid to use field `[]const type` that forces entire
+        //       the caller known at comptime.
+        pub const _types: []const type = types;
+
+        pub fn getKind() QueryFilterKind {
+            return kind;
+        }
+    };
+}
+
+fn isFilter(comptime T: type) bool {
+    if (@typeInfo(T) != .@"struct") return false;
+    return @hasField(T, "_kind") and @FieldType(T, "_kind") == QueryFilterKind;
+}
+
 /// A wrapper for automatically querying a specified entity components.
 pub fn Query(comptime types: []const type) type {
+    comptime if (types.len <= 0)
+        @compileError("Cannot use `Query` with empty arguments");
+
+    const queried_type = comptime get_queried: {
+        var count_valid = 0;
+        for (types) |T| {
+            if (!isFilter(T)) {
+                count_valid += 1;
+            }
+        }
+        if (count_valid == 0)
+            @compileError("There aren't any valid component to query.");
+
+        var final_types: [count_valid]type = undefined;
+        var curr_i = 0;
+        for (types) |T| {
+            if (!isFilter(T)) {
+                final_types[curr_i] = T;
+                curr_i += 1;
+            }
+        }
+        break :get_queried final_types;
+    };
+
+    // NOTE: flatten all types in the query filter to use in order to
+    //       retrieve all entities IDs
+    const flatten_type = comptime get_flatten: {
+        var count_valid = 0;
+        for (types) |T| {
+            if (isFilter(T)) {
+                count_valid += T._types.len;
+            } else {
+                count_valid += 1;
+            }
+        }
+
+        var final_types: [count_valid]type = undefined;
+        var curr_i = 0;
+        for (types) |T| {
+            if (isFilter(T)) {
+                switch (T.getKind()) {
+                    .with => for (T._types) |FilterType| {
+                        final_types[curr_i] = FilterType;
+                        curr_i += 1;
+                    },
+                }
+            } else {
+                final_types[curr_i] = T;
+                curr_i += 1;
+            }
+        }
+        break :get_flatten final_types;
+    };
+
     return struct {
         result: []Tuple = &.{},
 
         pub const Result = []Tuple;
-        pub const Tuple = std.meta.Tuple(types);
+        pub const Tuple = std.meta.Tuple(&queried_type);
         const Self = @This();
 
         /// Fetch all entities that have **all** of the speicifed component types.
@@ -49,11 +131,11 @@ pub fn Query(comptime types: []const type) type {
             const alloc = w.arena.allocator();
             // Temporary list containing entity ids for each component storage
             var temp_list: std.ArrayList(EntityID) = .empty;
-            const min_storage = try getKeysOfMinStorage(w, types);
+            const min_storage = try getKeysOfMinStorage(w, &flatten_type);
             // init the result with the storage containing the fewest elements
             var result_list: std.ArrayList(EntityID) = .fromOwnedSlice(min_storage.items);
 
-            inline for (types, 0..) |T, i| {
+            inline for (flatten_type, 0..) |T, i| {
                 // use label to control flow in comptime
                 skip_min: {
                     // skip the min_storage because its available
@@ -74,7 +156,7 @@ pub fn Query(comptime types: []const type) type {
                 }
             }
 
-            self.result = try tuplesFromTypes(w, result_list.items, types);
+            self.result = try tuplesFromTypes(w, result_list.items, &queried_type);
         }
 
         /// return the first result element
@@ -245,6 +327,8 @@ test "get keys of min storage" {
     try std.testing.expectEqualSlices(u64, &.{1}, k2.items);
 }
 
+/// Get all components (defined in `types`) and return tuples,
+/// where for each, it contains all defined components of an entity.
 pub fn tuplesFromTypes(
     w: World,
     entities: []const EntityID,

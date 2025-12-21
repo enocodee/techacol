@@ -10,8 +10,13 @@ pub const common = @import("ecs/common.zig");
 pub const CommonModule = common.CommonModule;
 
 pub const query = struct {
-    pub const Query = @import("ecs/query.zig").Query;
-    pub const QueryError = @import("ecs/query.zig").QueryError;
+    const _query = @import("ecs/query.zig");
+
+    pub const Query = _query.Query;
+    pub const QueryError = _query.QueryError;
+
+    // filter
+    pub const With = _query.With;
 
     pub const Resource = @import("ecs/resource.zig").Resource;
 };

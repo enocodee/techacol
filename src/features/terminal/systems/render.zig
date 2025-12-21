@@ -10,6 +10,7 @@ const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 
 const Query = ecs.query.Query;
+const With = ecs.query.With;
 const Resource = ecs.query.Resource;
 const World = ecs.World;
 const Grid = @import("ecs").common.Grid;
@@ -23,13 +24,13 @@ const State = resource.State;
 pub fn render(
     res_style: Resource(Style),
     res_state: Resource(*State),
-    queries: Query(&.{ Grid, Buffer, Position, Rectangle, Terminal }),
+    queries: Query(&.{ Grid, Buffer, Position, Rectangle, With(&.{Terminal}) }),
 ) !void {
     const state = res_state.result;
     const style = res_style.result;
 
     for (queries.many()) |q| {
-        const grid, const buf, const pos, const rec, _ = q;
+        const grid, const buf, const pos, const rec = q;
         drawLangSelection(state, rec, pos);
         try buf.drawCursor(grid, style, state);
         try buf.draw(grid, style);

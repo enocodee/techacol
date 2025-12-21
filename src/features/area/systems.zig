@@ -9,9 +9,11 @@ const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 const Area = @import("components.zig").Area;
 
+const With = ecs.query.With;
+
 pub fn render(
     res_assets: Resource(*GameAssets),
-    queries: Query(&.{ Grid, Area }),
+    queries: Query(&.{ Grid, With(&.{Area}) }),
 ) !void {
     const assets = res_assets.result;
     const font = try assets.getMainFont();

@@ -6,6 +6,7 @@ const ecs_common = ecs.common;
 const input = @import("input.zig");
 
 const Query = ecs.query.Query;
+const With = ecs.query.With;
 const Resource = ecs.query.Resource;
 const World = ecs.World;
 const Terminal = @import("../mod.zig").Terminal;
@@ -22,10 +23,10 @@ const State = resource.State;
 
 pub fn inHover(
     res_state: Resource(*State),
-    queries: Query(&.{ Position, Rectangle, Terminal }),
+    queries: Query(&.{ Position, Rectangle, With(&.{Terminal}) }),
 ) !void {
     const state = res_state.result;
-    const pos, const rec, _ = queries.single();
+    const pos, const rec = queries.single();
 
     const is_hovered = rl.checkCollisionPointRec(rl.getMousePosition(), .{
         .x = @floatFromInt(pos.x),
@@ -44,11 +45,11 @@ pub fn inHover(
 }
 
 pub fn inWindowResizing(
-    q_terminal_pos: Query(&.{ *Position, Terminal }),
-    q_btn: Query(&.{ *Position, Button }),
+    q_terminal_pos: Query(&.{ *Position, With(&.{Terminal}) }),
+    q_btn: Query(&.{ *Position, With(&.{Button}) }),
 ) !void {
-    const pos, _ = q_terminal_pos.single();
-    const btn_pos, _ = q_btn.single();
+    const pos = q_terminal_pos.single()[0];
+    const btn_pos = q_btn.single()[0];
 
     if (rl.isWindowResized()) {
         pos.x = rl.getScreenWidth() - 300;
@@ -60,9 +61,9 @@ pub fn inWindowResizing(
 pub fn inFocused(
     alloc: std.mem.Allocator,
     res_state: Resource(State),
-    queries: Query(&.{ *Buffer, Grid, Terminal }),
+    queries: Query(&.{ *Buffer, Grid, With(&.{Terminal}) }),
 ) !void {
-    const buf, const grid, _ = queries.single();
+    const buf, const grid = queries.single();
 
     if (res_state.result.is_focused)
         try input.handleKeys(alloc, grid, buf);
@@ -71,8 +72,8 @@ pub fn inFocused(
 pub fn inClickedRun(
     w: *World,
     res_state: Resource(State),
-    child_queries: Query(&.{ @import("ecs").common.Children, Terminal }),
-    buf_queries: Query(&.{ Buffer, Terminal }),
+    child_queries: Query(&.{ Children, With(&.{Terminal}) }),
+    buf_queries: Query(&.{ Buffer, With(&.{Terminal}) }),
 ) !void {
     const child = child_queries.single()[0];
     // TODO: handle query children components
@@ -81,7 +82,7 @@ pub fn inClickedRun(
             .entity(child.id)
             .getComponents(&.{ Rectangle, Position }));
 
-    const buf, _ = buf_queries.single();
+    const buf = buf_queries.single()[0];
 
     if (rl.checkCollisionPointRec(
         rl.getMousePosition(),
@@ -108,8 +109,8 @@ pub fn inClickedRun(
 
 pub fn inCmdRunning(
     w: *World,
-    q_child: Query(&.{ Children, Terminal }),
-    q_executor: Query(&.{ Executor, Terminal }),
+    q_child: Query(&.{ Children, With(&.{Terminal}) }),
+    q_executor: Query(&.{ Executor, With(&.{Terminal}) }),
 ) !void {
     const state = try w.getMutResource(State);
     const executor = q_executor.single()[0];
