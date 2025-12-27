@@ -1,13 +1,11 @@
 const std = @import("std");
-const rl = @import("raylib");
 const ecs = @import("ecs");
 const components = @import("components.zig");
 
-const World = ecs.World;
+const Score = @import("../score/mod.zig").Score;
+
 const Query = ecs.query.Query;
 const Resource = ecs.query.Resource;
-const Position = ecs.common.Position;
-const Score = @import("../score/mod.zig").Score;
 const DebugBox = components.DebugBox;
 const DebugInfo = components.DebugInfo;
 

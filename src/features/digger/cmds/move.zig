@@ -1,13 +1,9 @@
-const std = @import("std");
 const ecs_common = @import("ecs").common;
 
-const Interpreter = @import("../../interpreter/Interpreter.zig");
-
 const World = @import("ecs").World;
-
-const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
 const InGrid = ecs_common.InGrid;
+
 const Digger = @import("../components.zig").Digger;
 
 pub const MoveDirection = enum { up, down, left, right };

@@ -150,6 +150,7 @@ pub const Command = union(enum) {
 
             pub fn default() If {
                 return .{
+                    // SAFETY: assign when parsing if statements
                     .condition = undefined,
                     .then_num_cmds = 0,
                     .else_num_cmds = 0,

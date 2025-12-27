@@ -1,8 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
 const ecs = @import("ecs");
-const digger = @import("../../digger/mod.zig");
-const utils = @import("../utils.zig");
 
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;

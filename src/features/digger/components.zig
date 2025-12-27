@@ -1,4 +1,3 @@
-const World = @import("ecs").World;
 const ecs_common = @import("ecs").common;
 
 pub const DiggerBundle = struct {

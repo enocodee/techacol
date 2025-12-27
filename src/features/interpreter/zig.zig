@@ -252,6 +252,8 @@ fn parseWhileNode(
     try list.append(alloc, .{
         .@"while" = .{
             .start_idx = items_count,
+            // SAFETY: we need to append it first, then assign the value
+            // after parsing.
             .condition = undefined,
         },
     });
@@ -279,6 +281,7 @@ pub fn parseCondExpr(
     list: *std.ArrayList(Command),
 ) ParseError!CondExpr {
     const node_tag = ast.nodeTag(idx);
+    // SAFETY: assign after parsing
     var cond: CondExpr = undefined;
 
     switch (node_tag) {

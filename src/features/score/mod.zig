@@ -1,4 +1,3 @@
-const std = @import("std");
 const ecs = @import("ecs");
 const ecs_common = ecs.common;
 

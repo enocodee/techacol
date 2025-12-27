@@ -1,11 +1,9 @@
-const std = @import("std");
 const ecs = @import("ecs");
 const rl = @import("raylib");
 
 const GameAssets = @import("../../GameAssets.zig");
 const Query = ecs.query.Query;
 const Resource = ecs.query.Resource;
-const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 const Area = @import("components.zig").Area;
 

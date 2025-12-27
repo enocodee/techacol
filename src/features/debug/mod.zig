@@ -1,5 +1,4 @@
 // TODO: Move this to `ecs.common`
-const std = @import("std");
 const rl = @import("raylib");
 const systems = @import("systems.zig");
 const components = @import("components.zig");

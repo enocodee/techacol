@@ -1,5 +1,3 @@
-const std = @import("std");
-const rl = @import("raylib");
 const ecs = @import("ecs");
 const ecs_common = ecs.common;
 

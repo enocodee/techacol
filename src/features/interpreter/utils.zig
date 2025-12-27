@@ -15,6 +15,7 @@ pub fn normalizedActionType(
     var iter = std.mem.splitScalar(u8, str, '.');
     _ = iter.first(); // skip `features`
     const object = iter.next().?; // get the main object
+    // SAFETY: assign after getting the action
     var action_type: []const u8 = undefined;
 
     std.debug.assert(iter.rest().len > 0);

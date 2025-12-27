@@ -1,4 +1,3 @@
-const std = @import("std");
 const rl = @import("raylib");
 const ecs_common = @import("ecs").common;
 const resources = @import("resources.zig");
@@ -7,10 +6,7 @@ const components = @import("components.zig");
 
 const World = @import("ecs").World;
 const Resourse = @import("ecs").query.Resource;
-const Button = ecs_common.Button;
 const ButtonBundle = ecs_common.ButtonBundle;
-const Rectangle = ecs_common.Rectangle;
-const Position = ecs_common.Position;
 const Grid = ecs_common.Grid;
 const State = resources.State;
 const Style = resources.Style;
@@ -19,7 +15,6 @@ const GameAssets = @import("../../GameAssets.zig");
 const Executor = @import("../command_executor/mod.zig").CommandExecutor;
 
 const TerminalBundle = components.TerminalBundle;
-const BufferBundle = components.BufferBundle;
 
 pub const Buffer = components.Buffer;
 pub const Terminal = components.Terminal;

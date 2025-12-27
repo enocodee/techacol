@@ -1,13 +1,10 @@
 const std = @import("std");
 const rl = @import("raylib");
 
-const digger = @import("../digger/mod.zig");
 const utils = @import("utils.zig");
 
 const ecs_common = @import("ecs").common;
-const World = @import("ecs").World;
 const Grid = ecs_common.Grid;
-const Command = @import("../interpreter/command.zig").Command;
 const State = @import("resources.zig").State;
 const Style = @import("resources.zig").Style;
 

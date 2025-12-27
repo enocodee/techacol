@@ -1,4 +1,3 @@
-const std = @import("std");
 const rl = @import("raylib");
 
 const Language = @import("../interpreter/Interpreter.zig").Language;

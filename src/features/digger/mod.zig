@@ -1,18 +1,9 @@
-const std = @import("std");
-const ecs_common = @import("ecs").common;
+const systems = @import("systems.zig");
 
-const Position = ecs_common.Position;
-const Circle = ecs_common.Circle;
-const Grid = ecs_common.Grid;
-const InGrid = ecs_common.InGrid;
 const World = @import("ecs").World;
 
-const Area = @import("../area/components.zig").Area;
 const DiggerBundle = @import("components.zig").DiggerBundle;
-
 pub const Digger = @import("components.zig").Digger;
-
-const systems = @import("systems.zig");
 
 pub const move = @import("cmds/move.zig");
 pub const check = @import("cmds/check.zig");
