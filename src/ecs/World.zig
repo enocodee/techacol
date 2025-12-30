@@ -335,7 +335,7 @@ pub fn addSystem(
     comptime system_fn: anytype,
 ) *World {
     _ = self.spawnEntity(&.{System{
-        .handler = system.systemHandler(system_fn),
+        .handler = system.toHandler(system_fn),
         .order = order,
     }});
     return self;

@@ -26,7 +26,7 @@ pub const System = struct {
 };
 
 /// Convert `system` to `handler` with wired params.
-pub fn systemHandler(comptime system: anytype) Handler {
+pub fn toHandler(comptime system: anytype) Handler {
     const H = struct {
         pub fn handle(w: *World) !void {
             const SystemType = @TypeOf(system);
