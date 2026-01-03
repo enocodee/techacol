@@ -2,10 +2,6 @@
 //!
 //! Systems define how controlling elements (entity, component,
 //! resource, ...) in application.
-//!
-//! * Registry: where all systems are registered (stored).
-//! * Scheduler: decides which system is executed.
-//! * Executor: decides how system is executed.
 const std = @import("std");
 
 const Allocator = std.mem.Allocator;
