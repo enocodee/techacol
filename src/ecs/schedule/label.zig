@@ -73,7 +73,7 @@ test "add systems" {
     var world: World = .init(alloc);
     defer world.deinit();
 
-    var test_label: Label("test") = .{};
+    var test_label: Label = .init("test");
     defer test_label.deinit(alloc);
 
     // No chidren were added
@@ -81,7 +81,7 @@ test "add systems" {
     try test_label.addSystem(alloc, H.system2);
     try test_label.addSystem(alloc, H.system3);
 
-    const system_nodes = test_label.schedule(world.alloc);
+    const system_nodes = test_label.schedule();
     for (system_nodes, 0..) |node, i| {
         try std.testing.expectEqual(i, node.id);
         try test_label.run(&world, node.*);

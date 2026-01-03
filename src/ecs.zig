@@ -32,5 +32,5 @@ test {
     @import("std").testing.refAllDeclsRecursive(@This());
 
     // NOTE: import for testing steps
-    _ = scheds.Graph;
+    _ = @import("ecs/schedule.zig").Graph;
 }
