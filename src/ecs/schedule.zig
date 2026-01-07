@@ -28,8 +28,8 @@ pub const schedules = struct {
     /// The main loop of the application
     pub const update = Label.init("update");
 
-    /// End the frame
-    pub const last = Label.init("deinit");
+    /// Frame deinit
+    pub const deinit = Label.init("deinit");
 };
 
 const MainScheduleOrder = struct {
@@ -40,7 +40,7 @@ const MainScheduleOrder = struct {
     /// Run multiple times
     labels: []const Label = &[_]Label{
         schedules.update,
-        schedules.last,
+        schedules.deinit,
     },
     is_run_once: bool = false,
 };
@@ -77,20 +77,9 @@ pub const main_schedule_mod = struct {
         _ = w
             .addSchedule(schedules.startup)
             .addSchedule(schedules.update)
-            .addSchedule(schedules.last)
+            .addSchedule(schedules.deinit)
             .addResource(MainScheduleOrder, .{})
             .addSystem(schedules.entry, run)
-            .addSystem(schedules.last, endFrame);
-
-        const schedule_update_ptr =
-            w
-                .getSchedulePtr(schedules.update) catch
-                @panic("`update` schedule not found");
-
-        schedule_update_ptr.addSetWithConfig(
-            w.alloc,
-            @import("ui.zig").UiRenderSet,
-            .{ .after = &.{@import("common.zig").RenderSet} },
-        ) catch @panic("OOM");
+            .addSystem(schedules.deinit, endFrame);
     }
 };
