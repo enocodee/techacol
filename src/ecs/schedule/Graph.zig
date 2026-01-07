@@ -9,12 +9,17 @@ const ScheduleGraph = @This();
 _nodes: std.ArrayList(Node) = .empty,
 count: usize = 0,
 
+pub const Child = enum {
+    system,
+    set,
+};
+
 pub const Node = struct {
     id: ID,
     is_visited: bool = false,
     children: std.ArrayList(ID) = .empty,
 
-    pub const ID = union(enum) {
+    pub const ID = union(Child) {
         system: usize,
         set: usize,
 
@@ -37,6 +42,25 @@ pub const Node = struct {
     pub fn deinit(self: *Node, alloc: std.mem.Allocator) void {
         self.children.deinit(alloc);
     }
+
+    /// The caller owns the return memory
+    pub fn getTypedChildren(
+        self: Node,
+        alloc: std.mem.Allocator,
+        kind: Child,
+    ) ![]Node.ID {
+        var list: std.ArrayList(Node.ID) = .empty;
+        for (self.children.items) |child| {
+            if (std.mem.eql(
+                u8,
+                @tagName(std.meta.activeTag(child)),
+                @tagName(kind),
+            )) {
+                try list.append(alloc, child);
+            }
+        }
+        return list.toOwnedSlice(alloc);
+    }
 };
 
 pub fn deinit(self: *ScheduleGraph, alloc: std.mem.Allocator) void {
@@ -55,7 +79,7 @@ pub inline fn nodes(self: ScheduleGraph) []Node {
 pub fn add(
     self: *ScheduleGraph,
     alloc: std.mem.Allocator,
-    kind: enum { system, set },
+    kind: Child,
 ) !Node.ID {
     const node: Node = .{
         .id = get_id: switch (kind) {
@@ -70,8 +94,10 @@ pub fn add(
     return node.id;
 }
 
-/// Add a dependency that should be run **after**
-/// a node with `id = parent_id`.
+/// Add a dependency after a node with `id = parent_id`.
+///
+// TODO: handle this
+/// **Note:** all dependencies must exist after the target
 pub fn addDep(
     self: *ScheduleGraph,
     alloc: std.mem.Allocator,
@@ -108,38 +134,55 @@ test "adding children" {
 /// `Topological` algorithm.
 ///
 /// The caller owns the returned vamemory.
+///
+// TODO: handle if dependencies exist before the target
 pub fn toposort(self: ScheduleGraph, alloc: std.mem.Allocator) ![]const Node.ID {
     var final: std.ArrayList(Node.ID) = .empty;
+    var cpy_nodes: []Node = try alloc.dupe(Node, self.nodes());
+    defer alloc.free(cpy_nodes);
 
-    for (self.nodes()) |*node| {
-        try self.traversal(alloc, &final, node);
+    for (cpy_nodes) |*node| {
+        try traversal(alloc, &cpy_nodes, &final, node);
     }
-
     return @ptrCast(try final.toOwnedSlice(alloc));
 }
 
-pub fn traversal(
-    self: ScheduleGraph,
+fn traversal(
     alloc: std.mem.Allocator,
+    all_nodes: *[]Node,
     list: *std.ArrayList(Node.ID),
     node: *Node,
-) !void {
+) std.mem.Allocator.Error!void {
     if (!node.is_visited) {
-        for (node.children.items) |child_id| {
-            try self.traversal(
-                alloc,
-                list,
-                &self._nodes.items[child_id.value()],
-            );
-        }
-
-        node.is_visited = true;
+        try childrenTraversal(alloc, all_nodes, list, node, .system);
+        try childrenTraversal(alloc, all_nodes, list, node, .set);
+        node.*.is_visited = true;
         switch (node.id) {
             .set => {},
             .system => {
                 try list.append(alloc, node.id);
             },
         }
+    }
+}
+
+fn childrenTraversal(
+    alloc: std.mem.Allocator,
+    all_nodes: *[]Node,
+    list: *std.ArrayList(Node.ID),
+    node: *Node,
+    child_type: Child,
+) !void {
+    const children = try node.getTypedChildren(alloc, child_type);
+    defer alloc.free(children);
+
+    for (children) |child_id| {
+        try traversal(
+            alloc,
+            all_nodes,
+            list,
+            &all_nodes.*[child_id.value()],
+        );
     }
 }
 
@@ -151,11 +194,11 @@ test "toposort" {
     const n0 = try graph.add(alloc, .set); // SetA
     const n1 = try graph.add(alloc, .set); // SetB
 
-    const n2 = try graph.add(alloc, .system); // system1
-    const n3 = try graph.add(alloc, .system); // system2
-    const n4 = try graph.add(alloc, .system); // system3
+    const n2 = try graph.add(alloc, .system);
+    const n3 = try graph.add(alloc, .system);
+    const n4 = try graph.add(alloc, .system);
 
-    try graph.addDep(alloc, n0, n3); // SetA contains system3
+    try graph.addDep(alloc, n0, n3); // SetA contains n3
     try graph.addDep(alloc, n0, n1); // SetA run before SetB
 
     try graph.addDep(alloc, n1, n2); // SetB contains n2

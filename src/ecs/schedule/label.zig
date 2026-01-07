@@ -13,19 +13,30 @@ const Graph = @import("Graph.zig");
 pub const Label = struct {
     const LabeledSchedule = @This();
 
-    /// The container that contains all systems in the schedule.
+    /// The container that contains all data which contains
+    /// systems and system sets in the schedule.
+    ///
+    /// Using `MultiArrayList` to make the index of elements
+    /// are synced with node indexes of that elements in the
+    /// graph. That means you can use `node.id` to access
+    /// directly a `data`.
+    ///
     /// Indexed by system node id in the graph.
-    systems: std.ArrayList(System) = .empty,
-    system_sets: std.ArrayList(SystemSet) = .empty,
+    data: std.MultiArrayList(Data) = .empty,
     graph: Graph = .{},
     _label: []const u8,
+
+    const Data = union(enum) {
+        set: SystemSet,
+        system: System,
+    };
 
     pub fn init(comptime _label: []const u8) Label {
         return .{ ._label = _label };
     }
 
     pub fn deinit(self: *LabeledSchedule, alloc: std.mem.Allocator) void {
-        self.systems.deinit(alloc);
+        self.data.deinit(alloc);
         self.graph.deinit(alloc);
     }
 
@@ -43,21 +54,25 @@ pub const Label = struct {
         comptime sys: System,
         comptime config: System.Config,
     ) !void {
-        var in_set_ids: []Graph.Node.ID = &[_]Graph.Node.ID{};
-        if (config.in_sets) |sets| {
-            inline for (sets) |set| {
-                const id = try self.getOrPutSystemSet(alloc, set);
-                in_set_ids = in_set_ids ++ id;
-            }
+        var in_set_ids: std.ArrayList(Graph.Node.ID) = .empty;
+        defer in_set_ids.deinit(alloc);
+
+        // all sets must exist before the system
+        inline for (config.in_sets) |set| {
+            const id = try self.getOrPutSystemSet(alloc, set);
+            try in_set_ids.append(alloc, id);
         }
 
-        const system_id = try self.putOneSystem(alloc, sys);
-        for (in_set_ids) |set_id| {
-            try self.graph.addDep(alloc, set_id, system_id);
+        const id = self.graph.count;
+        for (in_set_ids.items) |set_id| {
+            try self.graph.addDep(alloc, set_id, .{ .system = id });
         }
+
+        _ = try self.putOneSystem(alloc, sys);
     }
 
-    /// Append a **system** to the list and add a **system** node to the graph.
+    /// Append a **system** to the list and add a
+    /// **system** node to the graph.
     ///
     /// Return a node id
     fn putOneSystem(
@@ -65,7 +80,7 @@ pub const Label = struct {
         alloc: std.mem.Allocator,
         comptime sys: System,
     ) !Graph.Node.ID {
-        try self.systems.append(alloc, sys);
+        try self.data.append(alloc, .{ .system = sys });
         return try self.graph.add(alloc, .system);
     }
 
@@ -75,12 +90,14 @@ pub const Label = struct {
         comptime set: SystemSet,
         comptime config: SystemSet.Config,
     ) !void {
-        const set_id = try self.putOneSystemSet(alloc, set);
-
+        // ensure all `after` dependencies exist before
+        // the system set
         inline for (config.after) |s| {
             const parent_set_id = try self.getOrPutSystemSet(alloc, s);
-            try self.graph.addDep(alloc, parent_set_id, set_id);
+            try self.graph.addDep(alloc, parent_set_id, .{ .set = self.graph.count });
         }
+
+        _ = try self.putOneSystemSet(alloc, set);
 
         // TODO: config.before
     }
@@ -96,7 +113,7 @@ pub const Label = struct {
     ) !Graph.Node.ID {
         for (self.graph.nodes()) |node| {
             if (node.id == .system) continue;
-            const set_node = self.system_sets.items[node.id.set];
+            const set_node = self.data.get(node.id.set).set;
             if (set_node.eql(set)) return node.id;
         }
 
@@ -112,7 +129,7 @@ pub const Label = struct {
         alloc: std.mem.Allocator,
         comptime set: SystemSet,
     ) !Graph.Node.ID {
-        try self.system_sets.append(alloc, set);
+        try self.data.append(alloc, .{ .set = set });
         return try self.graph.add(alloc, .set);
     }
 
@@ -130,7 +147,7 @@ pub const Label = struct {
     /// Run a system by `node` in the graph
     ///
     /// This function asserts that `node` contains `id` of **a system**
-    /// and `id` value is lesss than total number of systems in the
+    /// and `id` value is less than total number of systems in the
     /// schedule.
     pub fn run(
         self: LabeledSchedule,
@@ -139,11 +156,12 @@ pub const Label = struct {
     ) !void {
         std.debug.assert(std.meta.activeTag(node_id) == .system);
         const system_node_id = node_id.system;
-        std.debug.assert(system_node_id < self.systems.items.len);
+        std.debug.assert(system_node_id < self.data.len);
 
         try self
-            .systems
-            .items[system_node_id]
+            .data
+            .get(system_node_id)
+            .system
             .handler(w);
     }
 };
@@ -182,4 +200,52 @@ test "add systems" {
     }
 
     // TODO: Added children
+}
+
+test "add systems with sets" {
+    const H = struct {
+        pub fn system1() !void {
+            std.log.debug("System 1 is running!", .{});
+        }
+        pub fn system2() !void {
+            std.log.debug("System 2 is running!", .{});
+        }
+        pub fn system3() !void {
+            std.log.debug("System 3 is running!", .{});
+        }
+    };
+
+    const alloc = std.testing.allocator;
+    var world: World = .init(alloc);
+    defer world.deinit();
+
+    var test_label: Label = .init("test");
+    defer test_label.deinit(alloc);
+
+    const SetA = SystemSet{ .name = "set_a" }; // node_id = 0
+    const SetB = SystemSet{ .name = "set_b" }; // node_id = 1
+
+    try test_label.addSetWithConfig(alloc, SetA, .{ .after = &.{SetB} });
+
+    try test_label.addSystemWithConfig(alloc, .fromFn(H.system1), .{ .in_sets = &.{SetA} }); // node_id = 2
+    try test_label.addSystemWithConfig(alloc, .fromFn(H.system2), .{ .in_sets = &.{SetB} }); // node_id = 3
+    try test_label.addSystemWithConfig(alloc, .fromFn(H.system3), .{ .in_sets = &.{SetA} }); // node_id = 4
+
+    const system_node_ids = try test_label.schedule(alloc);
+    defer alloc.free(system_node_ids);
+
+    const expected_ids = &[_]Graph.Node.ID{
+        .{ .system = 3 },
+        .{ .system = 2 },
+        .{ .system = 4 },
+    };
+
+    for (system_node_ids) |id| {
+        try test_label.run(&world, id);
+    }
+
+    for (system_node_ids, expected_ids) |id, i| {
+        try std.testing.expectEqual(i, id);
+        try test_label.run(&world, id);
+    }
 }

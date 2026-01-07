@@ -1,5 +1,6 @@
 //! A scheduler who collects and run all schedules by order
 //! in the application.
+//! TODO: Graph cache for schedules (notify when it need to be reset via `Event`)
 const std = @import("std");
 const ScheduleLabel = @import("label.zig").Label;
 
@@ -38,6 +39,8 @@ pub fn runSchedule(
 ) !void {
     const sched = try self.getLabel(label);
     const system_node_ids = try sched.schedule(alloc);
+    defer alloc.free(system_node_ids);
+
     for (system_node_ids) |id| {
         try sched.run(w, id);
     }
