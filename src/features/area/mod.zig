@@ -8,14 +8,14 @@ const Grid = @import("ecs").common.Grid;
 
 const Area = @import("components.zig").Area;
 
-pub const AreaSpawningSet: SystemSet = .{ .name = "area_spawning" };
+pub const spawning_set: SystemSet = .{ .name = "area_spawning" };
 
 pub fn build(w: *World) void {
     _ = w
         .addSystemWithConfig(
             scheds.startup,
             spawn,
-            .{ .in_sets = &.{AreaSpawningSet} },
+            .{ .in_sets = &.{spawning_set} },
         )
         .addSystems(scheds.update, .{systems.render});
 }

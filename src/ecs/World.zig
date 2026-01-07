@@ -449,6 +449,26 @@ pub fn getSchedulePtr(
     return self.system_scheduler.getLabelPtr(label);
 }
 
+/// This function can cause to `panic` due to adding
+/// an invalid schedule or out of memory.
+pub fn configureSet(
+    self: *World,
+    comptime label: ScheduleLabel,
+    comptime set: _system.Set,
+    comptime config: _system.Set.Config,
+) *World {
+    const sched = self.getSchedulePtr(label) catch
+        @panic("the `" ++ label._label ++ "` schedule not found");
+
+    sched.addSetWithConfig(
+        self.alloc,
+        set,
+        config,
+    ) catch @panic("OOM");
+
+    return self;
+}
+
 /// Run all systems of an schedule
 pub fn runSchedule(
     self: *World,

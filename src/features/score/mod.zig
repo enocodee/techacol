@@ -15,24 +15,24 @@ const SystemSet = ecs.system.Set;
 
 const Point = @import("components.zig").Point;
 
-pub const ScoreSpawningSet: SystemSet = .{ .name = "score_spawning" };
+pub const spawning_set: SystemSet = .{ .name = "score_spawning" };
 
 pub const Score = struct {
     amount: i32 = 0,
 };
 
 pub fn build(w: *World) void {
-    const schedule = w.getSchedulePtr(scheds.startup) catch @panic("unreachable");
-    schedule.addSetWithConfig(w.alloc, ScoreSpawningSet, .{
-        .after = &.{area.AreaSpawningSet},
-    }) catch @panic("OOM");
-
     _ = w
+        .configureSet(
+            scheds.startup,
+            spawning_set,
+            .{ .after = &.{area.spawning_set} },
+        )
         .addResource(Score, .{})
         .addSystemWithConfig(
             scheds.startup,
             spawn,
-            .{ .in_sets = &.{ScoreSpawningSet} },
+            .{ .in_sets = &.{spawning_set} },
         )
         .addSystems(scheds.update, &.{
         systems.updatePos,
