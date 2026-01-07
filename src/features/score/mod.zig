@@ -4,22 +4,36 @@ const scheds = ecs.schedules;
 
 const systems = @import("systems.zig");
 
+const area = @import("../area/mod.zig");
+
 const Position = ecs_common.Position;
 const Circle = ecs_common.Circle;
 const InGrid = ecs_common.InGrid;
 const Grid = ecs_common.Grid;
 const World = ecs.World;
+const SystemSet = ecs.system.Set;
 
 const Point = @import("components.zig").Point;
+
+pub const ScoreSpawningSet: SystemSet = .{ .name = "score_spawning" };
 
 pub const Score = struct {
     amount: i32 = 0,
 };
 
 pub fn build(w: *World) void {
+    const schedule = w.getSchedulePtr(scheds.startup) catch @panic("unreachable");
+    schedule.addSetWithConfig(w.alloc, ScoreSpawningSet, .{
+        .after = &.{area.AreaSpawningSet},
+    }) catch @panic("OOM");
+
     _ = w
         .addResource(Score, .{})
-        .addSystem(scheds.startup, spawn)
+        .addSystemWithConfig(
+            scheds.startup,
+            spawn,
+            .{ .in_sets = &.{ScoreSpawningSet} },
+        )
         .addSystems(scheds.update, &.{
         systems.updatePos,
         systems.updateScore,
