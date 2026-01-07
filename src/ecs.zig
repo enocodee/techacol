@@ -27,7 +27,13 @@ pub const query = struct {
 pub const schedules = struct {
     pub const startup = scheds.startup;
     pub const update = scheds.update;
-    pub const last = scheds.last;
+    pub const deinit = scheds.deinit;
+};
+
+pub const system = struct {
+    const _system = @import("ecs/system.zig");
+
+    pub const Set = _system.Set;
 };
 
 test {

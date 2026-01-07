@@ -449,6 +449,7 @@ pub fn getSchedulePtr(
     return self.system_scheduler.getLabelPtr(label);
 }
 
+/// Run all systems of an schedule
 pub fn runSchedule(
     self: *World,
     label: ScheduleLabel,
