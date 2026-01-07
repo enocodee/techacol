@@ -10,6 +10,8 @@ pub const Entity = @import("ecs/Entity.zig");
 pub const common = @import("ecs/common.zig");
 pub const CommonModule = common.CommonModule;
 
+pub const ui = @import("ecs/ui.zig");
+
 pub const query = struct {
     const _query = @import("ecs/query.zig");
 
@@ -25,7 +27,13 @@ pub const query = struct {
 pub const schedules = struct {
     pub const startup = scheds.startup;
     pub const update = scheds.update;
-    pub const last = scheds.last;
+    pub const deinit = scheds.deinit;
+};
+
+pub const system = struct {
+    const _system = @import("ecs/system.zig");
+
+    pub const Set = _system.Set;
 };
 
 test {

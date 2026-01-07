@@ -2,14 +2,21 @@ const std = @import("std");
 const systems = @import("systems.zig");
 const scheds = @import("ecs").schedules;
 
+const SystemSet = @import("ecs").system.Set;
 const World = @import("ecs").World;
 const Grid = @import("ecs").common.Grid;
 
 const Area = @import("components.zig").Area;
 
+pub const spawning_set: SystemSet = .{ .name = "area_spawning" };
+
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(scheds.startup, spawn)
+        .addSystemWithConfig(
+            scheds.startup,
+            spawn,
+            .{ .in_sets = &.{spawning_set} },
+        )
         .addSystems(scheds.update, .{systems.render});
 }
 

@@ -62,17 +62,16 @@ pub fn main() !void {
         }
 
         const friendly_name = blk: {
-            const name = t.name;
-            var it = std.mem.splitScalar(u8, name, '.');
-            while (it.next()) |value| {
-                if (std.mem.eql(u8, value, "test")) {
-                    const rest = it.rest();
-                    break :blk if (rest.len > 0) rest else name;
-                }
-            }
-            break :blk name;
+            const origin = t.name;
+            const test_idx = std.mem.indexOf(u8, origin, "test") orelse break :blk t.name;
+            const final = try std.fmt.allocPrint(allocator, "{s}{s}", .{
+                origin[0..test_idx],
+                origin[test_idx + "test.".len ..],
+            });
+            break :blk final;
         };
 
+        // const friendly_name = t.name;
         current_test = friendly_name;
         std.testing.allocator_instance = .{};
         const result = t.func();
@@ -296,4 +295,3 @@ fn isSetup(t: std.builtin.TestFn) bool {
 fn isTeardown(t: std.builtin.TestFn) bool {
     return std.mem.endsWith(u8, t.name, "tests:afterAll");
 }
-

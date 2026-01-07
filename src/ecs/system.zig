@@ -14,6 +14,10 @@ pub const Handler = *const fn (*World) anyerror!void;
 pub const System = struct {
     handler: Handler,
 
+    pub const Config = struct {
+        in_sets: []const Set = &.{},
+    };
+
     pub fn fromFn(comptime system: anytype) System {
         const Fn = @TypeOf(system);
         const fn_info = @typeInfo(Fn);
@@ -32,6 +36,20 @@ pub const System = struct {
         return .{
             .handler = toHandler(system),
         };
+    }
+};
+
+// A group of systems
+pub const Set = struct {
+    name: []const u8,
+
+    pub const Config = struct {
+        after: []const Set = &.{},
+        before: []const Set = &.{},
+    };
+
+    pub inline fn eql(self: Set, another: Set) bool {
+        return std.mem.eql(u8, self.name, another.name);
     }
 };
 

@@ -14,6 +14,8 @@ pub const Graph = @import("schedule/Graph.zig");
 pub const Scheduler = @import("schedule/Scheduler.zig");
 
 /// All schedule labels are pre-defined in the `ecs`.
+///
+/// See `main_schedule_mod` for pre-customization of schedules.
 pub const schedules = struct {
     /// The schedule should be run first of all whenever
     /// frame begins.
@@ -26,8 +28,8 @@ pub const schedules = struct {
     /// The main loop of the application
     pub const update = Label.init("update");
 
-    /// End the frame
-    pub const last = Label.init("deinit");
+    /// Frame deinit
+    pub const deinit = Label.init("deinit");
 };
 
 const MainScheduleOrder = struct {
@@ -38,7 +40,7 @@ const MainScheduleOrder = struct {
     /// Run multiple times
     labels: []const Label = &[_]Label{
         schedules.update,
-        schedules.last,
+        schedules.deinit,
     },
     is_run_once: bool = false,
 };
@@ -75,9 +77,9 @@ pub const main_schedule_mod = struct {
         _ = w
             .addSchedule(schedules.startup)
             .addSchedule(schedules.update)
-            .addSchedule(schedules.last)
+            .addSchedule(schedules.deinit)
             .addResource(MainScheduleOrder, .{})
             .addSystem(schedules.entry, run)
-            .addSystem(schedules.last, endFrame);
+            .addSystem(schedules.deinit, endFrame);
     }
 };
