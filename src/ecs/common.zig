@@ -28,7 +28,7 @@ pub const Button = button.Button;
 pub const ButtonBundle = button.Bundle;
 
 /// # Addons:
-/// + Add the entry schedule & the main schedule.
+/// + Add the main schedule.
 /// + Extract & render functions for common components
 /// automatically.
 ///
