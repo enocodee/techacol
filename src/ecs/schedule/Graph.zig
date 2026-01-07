@@ -43,7 +43,7 @@ pub const Node = struct {
         self.children.deinit(alloc);
     }
 
-    /// The caller owns the return memory
+    /// The caller owns the returned memory
     pub fn getTypedChildren(
         self: Node,
         alloc: std.mem.Allocator,
@@ -95,9 +95,6 @@ pub fn add(
 }
 
 /// Add a dependency after a node with `id = parent_id`.
-///
-// TODO: handle this
-/// **Note:** all dependencies must exist after the target
 pub fn addDep(
     self: *ScheduleGraph,
     alloc: std.mem.Allocator,
@@ -133,6 +130,10 @@ test "adding children" {
 /// Return an immutable node slice after sorting using
 /// `Topological` algorithm.
 ///
+/// If the graph has systems, system sets for dependencies,
+/// then this function should sort **all children system first**,
+/// **followed by children system set**.
+///
 /// The caller owns the returned vamemory.
 ///
 // TODO: handle if dependencies exist before the target
@@ -154,8 +155,28 @@ fn traversal(
     node: *Node,
 ) std.mem.Allocator.Error!void {
     if (!node.is_visited) {
-        try childrenTraversal(alloc, all_nodes, list, node, .system);
-        try childrenTraversal(alloc, all_nodes, list, node, .set);
+        const sys_children = try node.getTypedChildren(alloc, .system);
+        defer alloc.free(sys_children);
+        for (sys_children) |child_id| {
+            try traversal(
+                alloc,
+                all_nodes,
+                list,
+                &all_nodes.*[child_id.value()],
+            );
+        }
+
+        const set_children = try node.getTypedChildren(alloc, .set);
+        defer alloc.free(set_children);
+        for (sys_children) |child_id| {
+            try traversal(
+                alloc,
+                all_nodes,
+                list,
+                &all_nodes.*[child_id.value()],
+            );
+        }
+
         node.*.is_visited = true;
         switch (node.id) {
             .set => {},
@@ -163,26 +184,6 @@ fn traversal(
                 try list.append(alloc, node.id);
             },
         }
-    }
-}
-
-fn childrenTraversal(
-    alloc: std.mem.Allocator,
-    all_nodes: *[]Node,
-    list: *std.ArrayList(Node.ID),
-    node: *Node,
-    child_type: Child,
-) !void {
-    const children = try node.getTypedChildren(alloc, child_type);
-    defer alloc.free(children);
-
-    for (children) |child_id| {
-        try traversal(
-            alloc,
-            all_nodes,
-            list,
-            &all_nodes.*[child_id.value()],
-        );
     }
 }
 

@@ -21,7 +21,7 @@ pub const Label = struct {
     /// graph. That means you can use `node.id` to access
     /// directly a `data`.
     ///
-    /// Indexed by system node id in the graph.
+    /// Indexed by `Node.ID` in the graph.
     data: std.MultiArrayList(Data) = .empty,
     graph: Graph = .{},
     _label: []const u8,
@@ -134,7 +134,7 @@ pub const Label = struct {
     }
 
     /// Get all node in the graph after sorting for scheduling.
-    /// The caller owns the returned vamemory.
+    /// The caller owns the returned memory.
     ///
     /// See `Label.run()` to run a system by node id.
     pub fn schedule(
@@ -144,11 +144,11 @@ pub const Label = struct {
         return self.graph.toposort(alloc);
     }
 
-    /// Run a system by `node` in the graph
+    /// Run a system by `node_id` in the graph.
     ///
-    /// This function asserts that `node` contains `id` of **a system**
-    /// and `id` value is less than total number of systems in the
-    /// schedule.
+    /// This function asserts that `node_id` contains the id of
+    /// **a system** and `id` value is less than total number of systems
+    /// in the schedule.
     pub fn run(
         self: LabeledSchedule,
         w: *World,
