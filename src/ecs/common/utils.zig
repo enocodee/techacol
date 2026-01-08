@@ -1,10 +1,15 @@
-const std = @import("std");
-
 const Query = @import("../query.zig").Query;
 const World = @import("../World.zig");
+const Without = @import("../query.zig").Without;
+const UiStyle = @import("../ui.zig").components.UiStyle;
 
+/// A wrapper for automatically querying a specified
+/// normal entity components that should be called in
+/// `system.toHandler` .
+///
+/// See `ui.QueryUiToRender` for UI components.
 pub fn QueryToRender(comptime types: []const type) type {
-    const TypedQuery = Query(types);
+    const TypedQuery = Query(types ++ [_]type{Without(&.{UiStyle})});
     return struct {
         result: TypedQuery.Result = &.{},
 
