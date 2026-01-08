@@ -26,6 +26,8 @@ pub const InGrid = grid.InGrid;
 pub const Position = position.Position;
 pub const Button = button.Button;
 pub const ButtonBundle = button.Bundle;
+pub const Text = @import("common/Text.zig");
+pub const TextBundle = Text.Bundle;
 
 /// # Addons:
 /// + Add the main schedule.
@@ -41,6 +43,7 @@ pub const CommonModule = struct {
             button.render,
             grid.render,
             circle.render,
+            Text.render,
         });
     }
 };
