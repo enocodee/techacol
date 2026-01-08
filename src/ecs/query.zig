@@ -149,7 +149,7 @@ pub fn Query(comptime types: []const type) type {
                     while (data_iter.next()) |it| {
                         try temp_list.append(alloc, it.*);
                     }
-                    try findMatch(alloc, &result_list, temp_list);
+                    try findIdentical(alloc, &result_list, temp_list);
 
                     // reset l1
                     temp_list.clearAndFree(alloc);
@@ -171,12 +171,12 @@ pub fn Query(comptime types: []const type) type {
     };
 }
 
-/// Matching enittiy ids between `l1` and `l2`.
+/// Find all identical enittiy ids between `l1` and `l2`.
 /// The result will be written to l1 and the order of
 /// elements following `l1`.
 ///
 /// If one of lists is `null`, assign remaining value to `dest`.
-pub fn findMatch(
+pub fn findIdentical(
     alloc: std.mem.Allocator,
     l1: *std.ArrayList(EntityID),
     l2: std.ArrayList(EntityID),
@@ -203,7 +203,7 @@ pub fn findMatch(
     try l1.appendSlice(alloc, l.items);
 }
 
-test "find match" {
+test "find identical" {
     const alloc = std.testing.allocator;
     var l1: std.ArrayList(EntityID) = .empty;
     defer l1.deinit(alloc);
@@ -213,7 +213,7 @@ test "find match" {
     defer l2.deinit(alloc);
     try l2.appendSlice(alloc, &buf2);
 
-    try findMatch(alloc, &l2, l1);
+    try findIdentical(alloc, &l2, l1);
     try std.testing.expectEqualSlices(EntityID, &[_]EntityID{ 1, 2, 3, 6 }, l2.items);
 
     var buf3 = [_]EntityID{ 1, 3, 2, 7, 8 };
@@ -226,10 +226,10 @@ test "find match" {
     defer l4.deinit(alloc);
     try l4.appendSlice(alloc, &buf4);
 
-    try findMatch(alloc, &l3, l4);
+    try findIdentical(alloc, &l3, l4);
     try std.testing.expectEqualSlices(EntityID, &[_]EntityID{ 1, 3, 2 }, l3.items);
 
-    try findMatch(alloc, &l2, l3);
+    try findIdentical(alloc, &l2, l3);
     try std.testing.expectEqualSlices(EntityID, &[_]EntityID{ 1, 2, 3 }, l2.items);
 }
 
