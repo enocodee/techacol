@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const resource = @import("../resources.zig");
 const ecs = @import("ecs");
+const ecs_ui = @import("ecs").ui;
 const ecs_common = ecs.common;
 const input = @import("input.zig");
 
@@ -9,30 +10,29 @@ const Query = ecs.query.Query;
 const With = ecs.query.With;
 const Resource = ecs.query.Resource;
 const World = ecs.World;
+const UiStyle = ecs_ui.components.UiStyle;
 const Terminal = @import("../mod.zig").Terminal;
+const RunButton = @import("../mod.zig").RunButton;
 const Buffer = @import("../mod.zig").Buffer;
 const Executor = @import("../../command_executor/mod.zig").CommandExecutor;
 
 const Children = ecs_common.Children;
-const Rectangle = ecs_common.Rectangle;
-const Position = ecs_common.Position;
-const Button = ecs_common.Button;
 const Grid = ecs_common.Grid;
 
 const State = resource.State;
 
 pub fn inHover(
     res_state: Resource(*State),
-    queries: Query(&.{ Position, Rectangle, With(&.{Terminal}) }),
+    queries: Query(&.{ UiStyle, With(&.{Terminal}) }),
 ) !void {
     const state = res_state.result;
-    const pos, const rec = queries.single();
+    const ui_style = queries.single()[0];
 
     const is_hovered = rl.checkCollisionPointRec(rl.getMousePosition(), .{
-        .x = @floatFromInt(pos.x),
-        .y = @floatFromInt(pos.y),
-        .width = @floatFromInt(rec.width),
-        .height = @floatFromInt(rec.height),
+        .x = @floatFromInt(ui_style.pos.x),
+        .y = @floatFromInt(ui_style.pos.y),
+        .width = @floatFromInt(ui_style.width),
+        .height = @floatFromInt(ui_style.height),
     });
 
     if (is_hovered) {
@@ -45,16 +45,16 @@ pub fn inHover(
 }
 
 pub fn inWindowResizing(
-    q_terminal_pos: Query(&.{ *Position, With(&.{Terminal}) }),
-    q_btn: Query(&.{ *Position, With(&.{Button}) }),
+    q_terminal_pos: Query(&.{ *UiStyle, With(&.{Terminal}) }),
+    q_btn: Query(&.{ *UiStyle, With(&.{RunButton}) }),
 ) !void {
-    const pos = q_terminal_pos.single()[0];
-    const btn_pos = q_btn.single()[0];
+    const term_style = q_terminal_pos.single()[0];
+    const btn_style = q_btn.single()[0];
 
     if (rl.isWindowResized()) {
-        pos.x = rl.getScreenWidth() - 300;
-        btn_pos.y = pos.y + 350;
-        btn_pos.x = pos.x;
+        term_style.pos.x = rl.getScreenWidth() - 300;
+        btn_style.pos.y = term_style.pos.y + 350;
+        btn_style.pos.x = term_style.pos.x;
     }
 }
 
@@ -77,20 +77,20 @@ pub fn inClickedRun(
 ) !void {
     const child = child_queries.single()[0];
     // TODO: handle query children components
-    const rec, const pos =
+    const ui_style =
         (try w
             .entity(child.id)
-            .getComponents(&.{ Rectangle, Position }));
+            .getComponents(&.{UiStyle}))[0];
 
     const buf = buf_queries.single()[0];
 
     if (rl.checkCollisionPointRec(
         rl.getMousePosition(),
         .{
-            .x = @floatFromInt(pos.x),
-            .y = @floatFromInt(pos.y),
-            .width = @floatFromInt(rec.width),
-            .height = @floatFromInt(rec.height),
+            .x = @floatFromInt(ui_style.pos.x),
+            .y = @floatFromInt(ui_style.pos.y),
+            .width = @floatFromInt(ui_style.width),
+            .height = @floatFromInt(ui_style.height),
         },
     )) {
         if (rl.isMouseButtonPressed(.left) and res_state.result.active) {
@@ -115,12 +115,12 @@ pub fn inCmdRunning(
     const state = try w.getMutResource(State);
     const executor = q_executor.single()[0];
     const child = q_child.single()[0];
-    const run_btn = (try w.entity(child.id).getComponents(&.{*Button}))[0];
+    const ui_style_run_btn: *UiStyle = (try w.entity(child.id).getComponents(&.{*UiStyle}))[0];
 
     state.*.active = !executor.is_running;
     if (state.active) {
-        run_btn.content = "Run";
+        ui_style_run_btn.text.?.content = "Run";
     } else {
-        run_btn.content = "Executing";
+        ui_style_run_btn.text.?.content = "Executing";
     }
 }

@@ -8,7 +8,6 @@ const components = @import("components.zig");
 
 const World = @import("ecs").World;
 const Resourse = @import("ecs").query.Resource;
-const ButtonBundle = ecs_common.ButtonBundle;
 const Grid = ecs_common.Grid;
 const State = resources.State;
 const Style = resources.Style;
@@ -20,6 +19,7 @@ const Executor = @import("../command_executor/mod.zig").CommandExecutor;
 const TerminalBundle = components.TerminalBundle;
 
 pub const Buffer = components.Buffer;
+pub const RunButton = components.RunButton;
 pub const Terminal = components.Terminal;
 
 pub fn build(w: *World) void {
@@ -31,14 +31,17 @@ pub fn build(w: *World) void {
         .addResource(State, .{})
         .addSystem(scheds.startup, spawn)
         .addSystems(scheds.update, .{
-        systems.input.execCmds,
-        systems.status.inHover,
-        systems.status.inWindowResizing,
-        systems.status.inFocused,
-        systems.status.inClickedRun,
-        systems.status.inCmdRunning,
+            systems.input.execCmds,
+            systems.status.inHover,
+            systems.status.inWindowResizing,
+            systems.status.inFocused,
+            systems.status.inClickedRun,
+            systems.status.inCmdRunning,
+        }).addSystemWithConfig(
+        scheds.update,
         systems.render.render,
-    });
+        .{ .in_sets = &.{ecs_ui.UiRenderSet} },
+    );
 }
 
 pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
@@ -65,10 +68,13 @@ pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
     grid.initCells(w.alloc, 5 + rl.getScreenWidth() - 300, 15);
 
     _ = try w.spawnEntity(.{
-        UiStyle{},
-        TerminalBundle{
+        UiStyle{
             .pos = .{ .x = rl.getScreenWidth() - 300, .y = 10 },
-            .rec = .{ .height = 360, .width = 300, .color = .black },
+            .height = 360,
+            .width = 300,
+            .bg_color = .black,
+        },
+        TerminalBundle{
             .buffer = .{ .buf = try Buffer.init(w.alloc), .grid = grid },
             .executor = Executor.init(w.alloc),
         },
@@ -76,11 +82,19 @@ pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
         pub fn cb(parent: @import("ecs").Entity) !void {
             const s = try parent.world.getResource(Style);
 
-            _ = parent.spawn(.{ UiStyle{}, ButtonBundle{
-                .btn = .{ .content = "Run", .font = s.font },
-                .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 370 },
-                .rec = .{ .width = 100, .height = 50, .color = .gray },
-            } });
+            _ = parent.spawn(.{
+                UiStyle{
+                    .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 370 },
+                    .width = 100,
+                    .height = 50,
+                    .bg_color = .gray,
+                    .text = .{
+                        .content = "Run",
+                        .font = s.font,
+                    },
+                },
+                RunButton{},
+            });
         }
     }.cb);
 }
