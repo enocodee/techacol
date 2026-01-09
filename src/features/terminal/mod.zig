@@ -1,5 +1,6 @@
 const rl = @import("raylib");
 const ecs_common = @import("ecs").common;
+const ecs_ui = @import("ecs").ui;
 const scheds = @import("ecs").schedules;
 const resources = @import("resources.zig");
 const systems = @import("systems.zig");
@@ -11,6 +12,7 @@ const ButtonBundle = ecs_common.ButtonBundle;
 const Grid = ecs_common.Grid;
 const State = resources.State;
 const Style = resources.Style;
+const UiStyle = ecs_ui.components.UiStyle;
 
 const GameAssets = @import("../../GameAssets.zig");
 const Executor = @import("../command_executor/mod.zig").CommandExecutor;
@@ -63,6 +65,7 @@ pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
     grid.initCells(w.alloc, 5 + rl.getScreenWidth() - 300, 15);
 
     _ = try w.spawnEntity(.{
+        UiStyle{},
         TerminalBundle{
             .pos = .{ .x = rl.getScreenWidth() - 300, .y = 10 },
             .rec = .{ .height = 360, .width = 300, .color = .black },
@@ -73,11 +76,11 @@ pub fn spawn(w: *World, res_style: Resourse(Style)) !void {
         pub fn cb(parent: @import("ecs").Entity) !void {
             const s = try parent.world.getResource(Style);
 
-            _ = parent.spawn(ButtonBundle{
+            _ = parent.spawn(.{ UiStyle{}, ButtonBundle{
                 .btn = .{ .content = "Run", .font = s.font },
                 .pos = .{ .x = (rl.getScreenWidth() - 300), .y = 370 },
                 .rec = .{ .width = 100, .height = 50, .color = .gray },
-            });
+            } });
         }
     }.cb);
 }
