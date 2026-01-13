@@ -21,11 +21,6 @@ pub const Scheduler = @import("schedule/Scheduler.zig");
 ///
 /// See `main_schedule_mod` for pre-customization of schedules.
 pub const schedules = struct {
-    /// The schedule should be run first of all whenever
-    /// frame begins.
-    /// The default entrypoint for schedules.
-    pub const entry = Label.init("entry");
-
     /// Start the application
     pub const startup = Label.init("startup");
 
@@ -94,7 +89,7 @@ pub const main_schedule_mod = struct {
             .addSchedule(schedules.update)
             .addSchedule(schedules.deinit)
             .addResource(MainScheduleOrder, .{})
-            .addSystem(schedules.entry, run)
+            .addSystem(Scheduler.entry, run)
             .addSystem(schedules.deinit, endFrame);
     }
 };

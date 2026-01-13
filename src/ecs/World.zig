@@ -23,7 +23,7 @@ const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
-const SystemScheduler = schedule.Scheduler;
+const Scheduler = schedule.Scheduler;
 const scheds = schedule.schedules;
 const System = _system.System;
 const SystemConfig = System.Config;
@@ -48,7 +48,7 @@ entity_count: usize = 0,
 component_storages: std.AutoHashMap(u64, ErasedComponentStorage),
 systems: std.ArrayList(System),
 resources: std.AutoHashMap(u64, ErasedResourceType),
-system_scheduler: SystemScheduler,
+system_scheduler: Scheduler,
 should_exit: bool = false,
 /// The `long-live` allocator.
 /// All things are allocated by this will persist until
@@ -67,16 +67,13 @@ pub fn init(alloc: std.mem.Allocator) World {
     const arena = alloc.create(std.heap.ArenaAllocator) catch @panic("OOM");
     arena.* = .init(alloc);
 
-    var system_scheduler: SystemScheduler = .{};
-    system_scheduler.addSchedule(alloc, scheds.entry);
-
     return .{
         .arena = arena,
         .alloc = alloc,
         .component_storages = .init(alloc),
         .systems = .empty,
         .resources = .init(alloc),
-        .system_scheduler = system_scheduler,
+        .system_scheduler = Scheduler.initWithEntrySchedule(alloc) catch @panic("OOM"),
     };
 }
 
@@ -485,7 +482,7 @@ pub fn run(self: *World) !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        try self.runSchedule(scheds.entry);
+        try self.runSchedule(Scheduler.entry);
 
         rl.clearBackground(.white);
     }

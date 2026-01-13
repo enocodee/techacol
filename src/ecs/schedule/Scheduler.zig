@@ -8,6 +8,19 @@ const Scheduler = @This();
 
 labels: std.StringHashMapUnmanaged(ScheduleLabel) = .{},
 
+/// The schedule should be run first of all whenever
+/// frame begins.
+/// The default entrypoint for schedules.
+pub const entry = ScheduleLabel.init("entry");
+
+pub fn initWithEntrySchedule(alloc: std.mem.Allocator) !Scheduler {
+    var labels: std.StringHashMapUnmanaged(ScheduleLabel) = .{};
+    try labels.put(alloc, entry._label, entry);
+    return .{
+        .labels = labels,
+    };
+}
+
 pub fn deinit(
     self: *Scheduler,
     alloc: std.mem.Allocator,
