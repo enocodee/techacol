@@ -10,13 +10,12 @@ const Style = @import("resources.zig").Style;
 
 pub const TerminalBundle = struct {
     term: Terminal = .{},
-    pos: ecs_common.Position,
-    rec: ecs_common.Rectangle,
     buffer: BufferBundle,
     executor: @import("../command_executor/mod.zig").CommandExecutor,
 };
 
 pub const Terminal = struct {};
+pub const RunButton = struct {};
 
 pub const BufferBundle = struct {
     buf: Buffer,

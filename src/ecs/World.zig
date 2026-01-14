@@ -23,7 +23,7 @@ const ErasedComponentStorage = component.ErasedStorage;
 const ComponentStorage = component.Storage;
 const ErasedResourceType = resource.ErasedResource;
 const Entity = @import("Entity.zig");
-const SystemScheduler = schedule.Scheduler;
+const Scheduler = schedule.Scheduler;
 const scheds = schedule.schedules;
 const System = _system.System;
 const SystemConfig = System.Config;
@@ -46,9 +46,9 @@ entity_count: usize = 0,
 /// |x: 15, y: 2 |   |x: 15, y: 2 |
 /// |------------|   |------------|
 component_storages: std.AutoHashMap(u64, ErasedComponentStorage),
-systems: std.ArrayList(System),
 resources: std.AutoHashMap(u64, ErasedResourceType),
-system_scheduler: SystemScheduler,
+system_scheduler: Scheduler,
+render_scheduler: Scheduler,
 should_exit: bool = false,
 /// The `long-live` allocator.
 /// All things are allocated by this will persist until
@@ -62,21 +62,24 @@ alloc: std.mem.Allocator,
 /// This allocator will be passed to the `systems` as a parameter.
 arena: *std.heap.ArenaAllocator,
 
+pub const SchedulerKind = enum {
+    render,
+    system,
+};
+
 /// This function can cause to `panic` due to out of memory
 pub fn init(alloc: std.mem.Allocator) World {
     const arena = alloc.create(std.heap.ArenaAllocator) catch @panic("OOM");
+    errdefer alloc.destroy(arena);
     arena.* = .init(alloc);
-
-    var system_scheduler: SystemScheduler = .{};
-    system_scheduler.addSchedule(alloc, scheds.entry);
 
     return .{
         .arena = arena,
         .alloc = alloc,
         .component_storages = .init(alloc),
-        .systems = .empty,
         .resources = .init(alloc),
-        .system_scheduler = system_scheduler,
+        .system_scheduler = Scheduler.initWithEntrySchedule(alloc) catch @panic("OOM"),
+        .render_scheduler = Scheduler.initWithEntrySchedule(alloc) catch @panic("OOM"),
     };
 }
 
@@ -98,9 +101,10 @@ pub fn deinit(self: *World) void {
 
     self.component_storages.deinit();
     self.resources.deinit();
-    self.systems.deinit(self.alloc);
 
     self.system_scheduler.deinit(self.alloc);
+    self.render_scheduler.deinit(self.alloc);
+
     self.arena.deinit();
     self.alloc.destroy(self.arena);
 }
@@ -348,21 +352,19 @@ test "Init entities" {
 /// See more info of `ScheduleLabel` in `ecs.schedule.Label`.
 pub fn addSystem(
     self: *World,
+    scheduler_kind: SchedulerKind,
     schedule_label: ScheduleLabel,
     comptime system_fn: anytype,
 ) *World {
-    const label =
-        self
-            .system_scheduler
-            .labels
-            .getPtr(schedule_label._label) orelse @panic("invalid shedule"); // NOTE: this is intended :)
-
-    label.addSystem(self.alloc, System.fromFn(system_fn)) catch @panic("OOM");
+    self
+        .getSchedulerPtr(scheduler_kind)
+        .addSystem(self.alloc, schedule_label, system_fn);
     return self;
 }
 
 pub fn addSystems(
     self: *World,
+    scheduler_kind: SchedulerKind,
     label: ScheduleLabel,
     comptime fns: anytype,
 ) *World {
@@ -371,7 +373,7 @@ pub fn addSystems(
         @compileError("Expected a tuple or struct, found " ++ @typeName(T));
 
     inline for (0..std.meta.fields(T).len) |i| {
-        _ = self.addSystem(label, fns[i]);
+        _ = self.addSystem(scheduler_kind, label, fns[i]);
     }
     return self;
 }
@@ -381,26 +383,21 @@ pub fn addSystems(
 /// See more info of `ScheduleLabel` in `ecs.schedule.Label`.
 pub fn addSystemWithConfig(
     self: *World,
+    scheduler_kind: SchedulerKind,
     schedule_label: ScheduleLabel,
     comptime system_fn: anytype,
     comptime config: SystemConfig,
 ) *World {
-    const label =
-        self
-            .system_scheduler
-            .labels
-            .getPtr(schedule_label._label) orelse @panic("invalid shedule"); // NOTE: this is intended :)
+    self
+        .getSchedulerPtr(scheduler_kind)
+        .addSystemWithConfig(self.alloc, schedule_label, system_fn, config);
 
-    label.addSystemWithConfig(
-        self.alloc,
-        System.fromFn(system_fn),
-        config,
-    ) catch @panic("OOM");
     return self;
 }
 
 pub fn addSystemsWithConfig(
     self: *World,
+    scheduler_kind: SchedulerKind,
     label: ScheduleLabel,
     comptime fns: anytype,
     comptime config: SystemConfig,
@@ -410,7 +407,7 @@ pub fn addSystemsWithConfig(
         @compileError("Expected a tuple or struct, found " ++ @typeName(T));
 
     inline for (0..std.meta.fields(T).len) |i| {
-        _ = self.addSystemWithConfig(label, fns[i], config);
+        _ = self.addSystemWithConfig(scheduler_kind, label, fns[i], config);
     }
     return self;
 }
@@ -433,10 +430,11 @@ pub fn addModule(self: *World, comptime T: type) void {
 
 pub fn addSchedule(
     self: *World,
+    scheduler_kind: SchedulerKind,
     label: ScheduleLabel,
 ) *World {
     self
-        .system_scheduler
+        .getSchedulerPtr(scheduler_kind)
         .addSchedule(self.alloc, label);
 
     return self;
@@ -444,20 +442,40 @@ pub fn addSchedule(
 
 pub fn getSchedulePtr(
     self: *World,
+    scheduler_kind: SchedulerKind,
     label: ScheduleLabel,
 ) !*ScheduleLabel {
-    return self.system_scheduler.getLabelPtr(label);
+    return self
+        .getSchedulerPtr(scheduler_kind)
+        .getLabelPtr(label);
 }
 
+pub fn getSchedulerPtr(self: *World, kind: SchedulerKind) *Scheduler {
+    return switch (kind) {
+        .system => &self.system_scheduler,
+        .render => &self.render_scheduler,
+    };
+}
+
+pub fn getScheduler(self: World, kind: SchedulerKind) Scheduler {
+    return switch (kind) {
+        .system => self.system_scheduler,
+        .render => self.render_scheduler,
+    };
+}
+
+/// Configure system sets.
+///
 /// This function can cause to `panic` due to adding
 /// an invalid schedule or out of memory.
 pub fn configureSet(
     self: *World,
+    scheduler_kind: SchedulerKind,
     comptime label: ScheduleLabel,
     comptime set: _system.Set,
     comptime config: _system.Set.Config,
 ) *World {
-    const sched = self.getSchedulePtr(label) catch
+    const sched = self.getSchedulePtr(scheduler_kind, label) catch
         @panic("the `" ++ label._label ++ "` schedule not found");
 
     sched.addSetWithConfig(
@@ -482,12 +500,8 @@ pub fn runSchedule(
 /// Start drawing in raylib and run the `.entry` schedule
 pub fn run(self: *World) !void {
     while (!self.should_exit) {
-        rl.beginDrawing();
-        defer rl.endDrawing();
-
-        try self.runSchedule(scheds.entry);
-
-        rl.clearBackground(.white);
+        try self.system_scheduler.runSchedule(self.alloc, self, Scheduler.entry);
+        try self.render_scheduler.runSchedule(self.alloc, self, Scheduler.entry);
     }
 }
 

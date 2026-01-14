@@ -1,12 +1,17 @@
-const std = @import("std");
-
 const Query = @import("../query.zig").Query;
 const World = @import("../World.zig");
+const Without = @import("../query.zig").filter.Without;
+const UiStyle = @import("../ui.zig").components.UiStyle;
 
+/// A wrapper for automatically querying a specified
+/// normal entity components that should be called in
+/// `system.toHandler` .
+///
+/// See `ui.QueryUiToRender` for UI components.
 pub fn QueryToRender(comptime types: []const type) type {
-    const TypedQuery = Query(types);
+    const TypedQuery = Query(types ++ [_]type{Without(&.{UiStyle})});
     return struct {
-        result: TypedQuery.Result = &.{},
+        result: TypedQuery.Result = .{},
 
         const Self = @This();
 
@@ -27,12 +32,12 @@ pub fn QueryToRender(comptime types: []const type) type {
             }
         }
 
-        pub fn many(self: Self) TypedQuery.Result {
-            return self.result;
+        pub fn many(self: Self) []TypedQuery.Tuple {
+            return self.result.many();
         }
 
         pub fn single(self: Self) ?TypedQuery.Tuple {
-            return if (self.result.len <= 0) return null else return self.result[0];
+            return self.result.singleOrNull();
         }
     };
 }

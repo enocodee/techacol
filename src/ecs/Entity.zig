@@ -1,6 +1,6 @@
 const std = @import("std");
 const common = @import("common.zig");
-const query_helper = @import("query.zig");
+const query_utils = @import("query/utils.zig");
 
 const World = @import("World.zig");
 
@@ -48,7 +48,7 @@ pub fn getComponents(
     self: Entity,
     comptime types: []const type,
 ) !std.meta.Tuple(types) {
-    return (try query_helper.tuplesFromTypes(
+    return (try query_utils.tuplesFromTypes(
         self.world.*,
         &.{self.id},
         types,

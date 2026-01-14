@@ -11,8 +11,8 @@ pub const check = @import("cmds/check.zig");
 
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(scheds.startup, spawn)
-        .addSystem(scheds.update, systems.updatePos);
+        .addSystem(.system, scheds.startup, spawn)
+        .addSystem(.system, scheds.update, systems.updatePos);
 }
 
 pub fn spawn(w: *World) !void {

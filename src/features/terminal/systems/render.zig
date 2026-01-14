@@ -1,21 +1,20 @@
 const rl = @import("raylib");
 const rg = @import("raygui");
 const ecs = @import("ecs");
+const ecs_ui = @import("ecs").ui;
 const ecs_common = ecs.common;
 const resource = @import("../resources.zig");
 
-const GameAssets = @import("../../../GameAssets.zig");
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 
 const Query = ecs.query.Query;
 const With = ecs.query.With;
 const Resource = ecs.query.Resource;
-const World = ecs.World;
+const UiStyle = ecs_ui.components.UiStyle;
 const Grid = @import("ecs").common.Grid;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
-const Button = ecs_common.Button;
 
 const Style = resource.Style;
 const State = resource.State;
@@ -23,14 +22,21 @@ const State = resource.State;
 pub fn render(
     res_style: Resource(Style),
     res_state: Resource(*State),
-    queries: Query(&.{ Grid, Buffer, Position, Rectangle, With(&.{Terminal}) }),
+    queries: Query(&.{ Grid, Buffer, UiStyle, With(&.{Terminal}) }),
 ) !void {
     const state = res_state.result;
     const style = res_style.result;
 
     for (queries.many()) |q| {
-        const grid, const buf, const pos, const rec = q;
-        drawLangSelection(state, rec, pos);
+        const grid, const buf, const ui_style: UiStyle = q;
+        drawLangSelection(state, .{
+            .width = @intCast(ui_style.width),
+            .height = @intCast(ui_style.height),
+            .color = ui_style.bg_color,
+        }, .{
+            .x = ui_style.pos.x,
+            .y = ui_style.pos.y,
+        });
         try buf.drawCursor(grid, style, state);
         try buf.draw(grid, style);
     }

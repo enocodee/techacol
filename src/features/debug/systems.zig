@@ -24,7 +24,7 @@ pub fn updateInfo(
 }
 
 pub fn render(queries: Query(&.{ DebugBox, DebugInfo })) !void {
-    for (queries.result) |q| {
+    for (queries.many()) |q| {
         const box, const info = q;
 
         box.draw(&.{

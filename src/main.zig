@@ -28,7 +28,7 @@ fn loop(alloc: std.mem.Allocator) !void {
     try world
         .addModules(&.{ecs.CommonModule})
         .addResource(GameAssets, .{})
-        .addSystems(schedules.update, &.{closeWindow})
+        .addSystems(.system, schedules.update, &.{closeWindow})
         .addModules(&.{
             area_mod,
             terminal_mod,

@@ -19,7 +19,8 @@ pub const query = struct {
     pub const QueryError = _query.QueryError;
 
     // filter
-    pub const With = _query.With;
+    pub const With = _query.filter.With;
+    pub const Without = _query.filter.Without;
 
     pub const Resource = @import("ecs/resource.zig").Resource;
 };

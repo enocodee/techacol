@@ -24,17 +24,19 @@ pub const Score = struct {
 pub fn build(w: *World) void {
     _ = w
         .configureSet(
+            .system,
             scheds.startup,
             spawning_set,
             .{ .after = &.{area.spawning_set} },
         )
         .addResource(Score, .{})
         .addSystemWithConfig(
+            .system,
             scheds.startup,
             spawn,
             .{ .in_sets = &.{spawning_set} },
         )
-        .addSystems(scheds.update, &.{
+        .addSystems(.system, scheds.update, &.{
         systems.updatePos,
         systems.updateScore,
     });

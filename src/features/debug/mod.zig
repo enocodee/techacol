@@ -10,11 +10,16 @@ const Info = components.DebugInfo;
 
 pub fn build(w: *World) void {
     _ = w
-        .addSystem(scheds.startup, spawn)
-        .addSystems(scheds.update, .{
-        systems.updateInfo,
+        .addSystem(.system, scheds.startup, spawn)
+        .addSystems(.system, scheds.update, .{
+            systems.updateInfo,
+        })
+        .addSystemWithConfig(
+        .render,
+        scheds.update,
         systems.render,
-    });
+        .{ .in_sets = &.{@import("ecs").ui.UiRenderSet} },
+    );
 }
 
 pub fn spawn(w: *World) !void {
