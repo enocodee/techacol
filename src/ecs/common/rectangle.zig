@@ -1,9 +1,6 @@
-const std = @import("std");
 const rl = @import("raylib");
 
-const World = @import("../World.zig");
 const Position = @import("position.zig").Position;
-
 const QueryToRender = @import("utils.zig").QueryToRender;
 
 pub const Rectangle = struct {

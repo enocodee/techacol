@@ -1,9 +1,6 @@
-const std = @import("std");
 const rl = @import("raylib");
 
-const World = @import("../../World.zig");
 const Grid = @import("components.zig").Grid;
-
 const QueryToRender = @import("../utils.zig").QueryToRender;
 
 pub fn renderGrid(queries: QueryToRender(&.{Grid})) !void {

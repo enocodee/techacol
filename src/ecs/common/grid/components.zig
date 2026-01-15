@@ -1,6 +1,5 @@
 const std = @import("std");
 const rl = @import("raylib");
-const common = @import("../../common.zig");
 
 /// Because we spawn a grid as an entity so another entities
 /// need which grid they are in via `InGrid`.
