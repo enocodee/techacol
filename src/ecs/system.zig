@@ -62,11 +62,26 @@ pub fn toHandler(comptime system: anytype) Handler {
             var args: std.meta.ArgsTuple(SystemType) = undefined;
             const system_info = @typeInfo(SystemType).@"fn";
 
+            var locked_arena = false;
+            var locked_alloc = false;
+            var locked_res = false;
+            var locked_comp = false;
+
             inline for (system_info.params, 0..) |param, i| {
                 switch (param.type.?) {
-                    *World => args[i] = w,
-                    *Arena => args[i] = w.arena,
-                    Allocator => args[i] = w.alloc,
+                    *World => {
+                        args[i] = w;
+                    },
+                    *Arena => {
+                        w._arena_mut.lock();
+                        locked_arena = true;
+                        args[i] = w.arena;
+                    },
+                    Allocator => {
+                        w._alloc_lock.lock();
+                        locked_alloc = true;
+                        args[i] = w.alloc;
+                    },
                     else => {
                         const T = param.type.?;
                         if (T == World) continue;
@@ -75,12 +90,30 @@ pub fn toHandler(comptime system: anytype) Handler {
                         // NOTE: This allow custom query functions
                         if (@hasDecl(T, "query")) {
                             var obj: T = .{};
-                            try obj.query(w.*);
+                            try obj.query(w);
                             args[i] = obj;
+
+                            // Resource
+                            if (@hasDecl(T, "TypedRes") and T.is_mutable) {
+                                std.log.debug("lock res", .{});
+                                locked_res = true;
+                                w.resources.lock.lock();
+                            }
+                            // Component
+                            if (!@hasDecl(T, "TypedRes") and T.is_mutable) {
+                                std.log.debug("lock comp", .{});
+                                locked_comp = true;
+                                w.components.lock.lock();
+                            }
                         }
                     },
                 }
             }
+
+            if (locked_alloc) w._alloc_lock.unlock();
+            if (locked_arena) w._arena_lock.unlock();
+            if (locked_res) w.resources.lock.unlock();
+            if (locked_comp) w.components.lock.unlock();
 
             try @call(.auto, system, args);
         }

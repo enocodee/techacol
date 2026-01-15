@@ -16,6 +16,8 @@ pub const query = struct {
     const _query = @import("ecs/query.zig");
 
     pub const Query = _query.Query;
+    pub const QueryToRender = @import("ecs/common/utils.zig").QueryToRender;
+    pub const QueryUiToRender = @import("ecs/ui/utils.zig").QueryUiToRender;
     pub const QueryError = _query.QueryError;
 
     // filter

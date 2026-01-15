@@ -1,3 +1,4 @@
+const std = @import("std");
 const Query = @import("../query.zig").Query;
 const World = @import("../World.zig");
 const Without = @import("../query.zig").filter.Without;
@@ -13,6 +14,8 @@ pub fn QueryToRender(comptime types: []const type) type {
     return struct {
         result: TypedQuery.Result = .{},
 
+        pub const is_mutable = TypedQuery.is_mutable;
+
         const Self = @This();
 
         /// This function is the same with `World.query()`, but it
@@ -20,11 +23,14 @@ pub fn QueryToRender(comptime types: []const type) type {
         ///
         /// Used to extract all components of an entity and ensure they are
         /// existed to render.
-        pub fn query(self: *Self, w: World) !void {
+        pub fn query(self: *Self, w: *World) !void {
             var obj: TypedQuery = .{};
+            // obj.log_enabled = true;
+
             if (obj.query(w)) {
                 self.result = obj.result;
             } else |err| {
+                std.log.debug("error occur in query component component to render", .{});
                 switch (err) {
                     World.GetComponentError.StorageNotFound => {}, // ignore
                     else => return err,

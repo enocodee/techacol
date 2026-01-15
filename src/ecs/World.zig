@@ -37,7 +37,22 @@ pub const Module = struct {
     build_fn: *const fn (*World) void,
 };
 
-entity_count: usize = 0,
+const ComponentStorages = struct {
+    lock: std.Thread.Mutex = .{},
+    storages: std.AutoHashMap(u64, ErasedComponentStorage),
+};
+
+const ResourceStorages = struct {
+    lock: std.Thread.Mutex = .{},
+    storages: std.AutoHashMap(u64, ErasedResourceType),
+};
+
+const Counter = struct {
+    lock: std.Thread.Mutex = .{},
+    entity: usize = 0,
+};
+
+counter: Counter = .{},
 /// Each storage store data of a component.
 /// # Example:
 /// |--Velocity--|   |--Position--|
@@ -45,8 +60,8 @@ entity_count: usize = 0,
 /// |------------|   |------------|
 /// |x: 15, y: 2 |   |x: 15, y: 2 |
 /// |------------|   |------------|
-component_storages: std.AutoHashMap(u64, ErasedComponentStorage),
-resources: std.AutoHashMap(u64, ErasedResourceType),
+components: ComponentStorages,
+resources: ResourceStorages,
 system_scheduler: Scheduler,
 render_scheduler: Scheduler,
 should_exit: bool = false,
@@ -61,6 +76,9 @@ alloc: std.mem.Allocator,
 ///
 /// This allocator will be passed to the `systems` as a parameter.
 arena: *std.heap.ArenaAllocator,
+thread_pool: *std.Thread.Pool,
+_arena_lock: std.Thread.Mutex = .{},
+_alloc_lock: std.Thread.Mutex = .{},
 
 pub const SchedulerKind = enum {
     render,
@@ -68,18 +86,22 @@ pub const SchedulerKind = enum {
 };
 
 /// This function can cause to `panic` due to out of memory
-pub fn init(alloc: std.mem.Allocator) World {
+pub fn init(alloc: std.mem.Allocator) !World {
     const arena = alloc.create(std.heap.ArenaAllocator) catch @panic("OOM");
     errdefer alloc.destroy(arena);
     arena.* = .init(alloc);
 
+    const pool = try alloc.create(std.Thread.Pool);
+    try pool.init(.{ .n_jobs = 4, .allocator = alloc });
+
     return .{
         .arena = arena,
         .alloc = alloc,
-        .component_storages = .init(alloc),
-        .resources = .init(alloc),
+        .components = .{ .storages = .init(alloc) },
+        .resources = .{ .storages = .init(alloc) },
         .system_scheduler = Scheduler.initWithEntrySchedule(alloc) catch @panic("OOM"),
         .render_scheduler = Scheduler.initWithEntrySchedule(alloc) catch @panic("OOM"),
+        .thread_pool = pool,
     };
 }
 
@@ -89,29 +111,34 @@ pub fn init(alloc: std.mem.Allocator) World {
 /// - List of `systems`.
 /// - Components in storages which have `deinit()`.
 pub fn deinit(self: *World) void {
-    var storage_iter = self.component_storages.iterator();
+    var storage_iter = self.components.storages.iterator();
     while (storage_iter.next()) |entry| {
         entry.value_ptr.*.deinit_fn(self.*, self.alloc);
     }
 
-    var resource_iter = self.resources.iterator();
+    var resource_iter = self.resources.storages.iterator();
     while (resource_iter.next()) |entry| {
         entry.value_ptr.*.deinit_fn(self.*, self.alloc);
     }
 
-    self.component_storages.deinit();
-    self.resources.deinit();
+    self.components.storages.deinit();
+    self.resources.storages.deinit();
 
     self.system_scheduler.deinit(self.alloc);
     self.render_scheduler.deinit(self.alloc);
 
+    self.thread_pool.deinit();
     self.arena.deinit();
+    self.alloc.destroy(self.thread_pool);
     self.alloc.destroy(self.arena);
 }
 
 pub fn newEntity(self: *World) Entity.ID {
-    const id = self.entity_count;
-    self.entity_count += 1;
+    self.counter.lock.lock();
+    defer self.counter.lock.unlock();
+
+    const id = self.counter.entity;
+    self.counter.entity += 1;
     return id;
 }
 
@@ -175,11 +202,14 @@ pub fn addResource(self: *World, comptime T: type, value: T) *World {
 
 /// This function can cause to `panic` due to out of memory
 pub fn setResource(self: *World, comptime T: type, value: T) void {
+    self.resources.lock.lock();
+    defer self.resources.lock.unlock();
+
     const resource_ptr = self.alloc.create(T) catch @panic("OOM");
     resource_ptr.* = value;
 
     const hash = std.hash_map.hashString(@typeName(T));
-    self.resources.put(hash, .{
+    self.resources.storages.put(hash, .{
         .ptr = resource_ptr,
         .deinit_fn = struct {
             pub fn deinit(w: World, alloc: std.mem.Allocator) void {
@@ -201,8 +231,8 @@ pub fn getResource(self: World, comptime T: type) !T {
     return (try ErasedResourceType.cast(self, T)).*;
 }
 
-pub fn getMutResource(self: World, comptime T: type) !*T {
-    return ErasedResourceType.cast(self, T);
+pub fn getMutResource(self: *World, comptime T: type) !*T {
+    return ErasedResourceType.cast(self.*, T);
 }
 
 test "set & get resource" {
@@ -247,11 +277,11 @@ pub fn newComponentStorage(
     };
 
     const hash = std.hash_map.hashString(@typeName(T));
-    self.component_storages.put(hash, .{
+    self.components.storages.put(hash, .{
         .ptr = storage,
         .deinit_fn = struct {
             pub fn deinit(w: World, alloc: std.mem.Allocator) void {
-                const ptr = ErasedComponentStorage.cast(w, T) catch unreachable;
+                const ptr = ErasedComponentStorage.cast(w, T, true) catch unreachable;
                 ptr.deinit(alloc);
                 alloc.destroy(ptr);
             }
@@ -259,7 +289,7 @@ pub fn newComponentStorage(
     }) catch @panic("OOM");
 
     std.log.debug("Add component - {s}", .{@typeName(T)});
-    return ErasedComponentStorage.cast(self.*, T) catch unreachable;
+    return ErasedComponentStorage.cast(self.*, T, true) catch unreachable;
 }
 
 /// Create the new storage if the storage of `T` component doesn't
@@ -275,9 +305,12 @@ pub fn setComponent(
     comptime T: type,
     component_value: T,
 ) void {
+    self.components.lock.lock();
+    defer self.components.lock.unlock();
+
     // get the storage or create the new one
     const s = ErasedComponentStorage
-        .cast(self.*, T) catch
+        .cast(self.*, T, true) catch
         self.newComponentStorage(T);
 
     // Append the value of the component to data
@@ -305,7 +338,7 @@ pub fn getComponent(
     entity_id: Entity.ID,
     comptime T: type,
 ) GetComponentError!T {
-    const s = try ErasedComponentStorage.cast(self, T);
+    const s = try ErasedComponentStorage.cast(self, T, true);
     return s.data.get(entity_id) orelse {
         std.log.err("not found any value of `{s}` component of the entity (id: `{d}`).", .{ @typeName(T), entity_id });
         return GetComponentError.ValueNotFound;
@@ -313,11 +346,11 @@ pub fn getComponent(
 }
 
 pub fn getMutComponent(
-    self: World,
+    self: *World,
     entity_id: Entity.ID,
     comptime T: type,
 ) !*T {
-    const s = try ErasedComponentStorage.cast(self, T);
+    const s = try ErasedComponentStorage.cast(self.*, T, true);
     return s.data.getPtr(entity_id) orelse GetComponentError.ValueNotFound;
 }
 
@@ -500,13 +533,17 @@ pub fn runSchedule(
 /// Start drawing in raylib and run the `.entry` schedule
 pub fn run(self: *World) !void {
     while (!self.should_exit) {
-        try self.system_scheduler.runSchedule(self.alloc, self, Scheduler.entry);
+        try self.thread_pool.spawn(wrappedRun, .{self});
         try self.render_scheduler.runSchedule(self.alloc, self, Scheduler.entry);
     }
 }
 
+pub fn wrappedRun(self: *World) void {
+    self.system_scheduler.runSchedule(self.alloc, self, Scheduler.entry) catch @panic("Error occurs");
+}
+
 pub fn query(
-    self: World,
+    self: *World,
     comptime types: []const type,
 ) !_query.Query(types) {
     var query_executor: _query.Query(types) = .{};

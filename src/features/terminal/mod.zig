@@ -23,7 +23,9 @@ pub const RunButton = components.RunButton;
 pub const Terminal = components.Terminal;
 
 pub fn build(w: *World) void {
+    w.resources.lock.lock();
     var assets = w.getMutResource(GameAssets) catch unreachable;
+    w.resources.lock.unlock();
     const font = assets.getTerminalFont() catch @panic("Cannot load terminal font");
 
     _ = w

@@ -49,7 +49,7 @@ pub fn getComponents(
     comptime types: []const type,
 ) !std.meta.Tuple(types) {
     return (try query_utils.tuplesFromTypes(
-        self.world.*,
+        self.world,
         &.{self.id},
         types,
     ))[0];

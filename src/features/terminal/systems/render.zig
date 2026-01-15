@@ -8,10 +8,8 @@ const resource = @import("../resources.zig");
 const Terminal = @import("../mod.zig").Terminal;
 const Buffer = @import("../mod.zig").Buffer;
 
-const Query = ecs.query.Query;
 const With = ecs.query.With;
 const Resource = ecs.query.Resource;
-const UiStyle = ecs_ui.components.UiStyle;
 const Grid = @import("ecs").common.Grid;
 const Rectangle = ecs_common.Rectangle;
 const Position = ecs_common.Position;
@@ -22,21 +20,22 @@ const State = resource.State;
 pub fn render(
     res_style: Resource(Style),
     res_state: Resource(*State),
-    queries: Query(&.{ Grid, Buffer, UiStyle, With(&.{Terminal}) }),
+    queries: ecs.query.QueryToRender(&.{ Grid, Buffer, With(&.{Terminal}) }),
 ) !void {
     const state = res_state.result;
     const style = res_style.result;
 
     for (queries.many()) |q| {
-        const grid, const buf, const ui_style: UiStyle = q;
-        drawLangSelection(state, .{
-            .width = @intCast(ui_style.width),
-            .height = @intCast(ui_style.height),
-            .color = ui_style.bg_color,
-        }, .{
-            .x = ui_style.pos.x,
-            .y = ui_style.pos.y,
-        });
+        const grid, const buf = q;
+        // TODO:
+        // drawLangSelection(state, .{
+        //     .width = @intCast(ui_style.width),
+        //     .height = @intCast(ui_style.height),
+        //     .color = ui_style.bg_color,
+        // }, .{
+        //     .x = ui_style.pos.x,
+        //     .y = ui_style.pos.y,
+        // });
         try buf.drawCursor(grid, style, state);
         try buf.draw(grid, style);
     }

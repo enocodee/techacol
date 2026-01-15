@@ -23,7 +23,7 @@ pub fn updateInfo(
     };
 }
 
-pub fn render(queries: Query(&.{ DebugBox, DebugInfo })) !void {
+pub fn render(queries: ecs.query.QueryToRender(&.{ DebugBox, DebugInfo })) !void {
     for (queries.many()) |q| {
         const box, const info = q;
 

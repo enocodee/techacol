@@ -7,10 +7,12 @@ pub fn Resource(comptime T: type) type {
     return struct {
         result: T = undefined,
 
-        const TypedResMut = @This();
+        pub const is_mutable = @typeInfo(T) == .pointer;
 
-        pub fn query(self: *TypedResMut, w: World) !void {
-            if (@typeInfo(T) == .pointer) {
+        const TypedRes = @This();
+
+        pub fn query(self: *TypedRes, w: *World) !void {
+            if (is_mutable) {
                 self.result = try w.getMutResource(utils.Deref(T));
             } else {
                 self.result = try w.getResource(T);
@@ -25,7 +27,7 @@ pub const ErasedResource = struct {
 
     pub inline fn cast(w: World, comptime T: type) !*T {
         const hash = std.hash_map.hashString(@typeName(T));
-        const value = w.resources.get(hash) orelse return World.GetResourceError.ValueNotFound;
+        const value = w.resources.storages.get(hash) orelse return World.GetResourceError.ValueNotFound;
         return @ptrCast(@alignCast(value.ptr));
     }
 };

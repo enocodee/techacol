@@ -20,7 +20,7 @@ fn closeWindow(w: *World) !void {
 }
 
 fn loop(alloc: std.mem.Allocator) !void {
-    var world: World = .init(alloc);
+    var world: World = try .init(alloc);
     defer world.deinit();
 
     rl.setTargetFPS(60);

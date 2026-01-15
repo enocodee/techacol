@@ -79,7 +79,11 @@ const KeyMin = struct {
 
 /// Get all keys of a storage in `types`
 /// which has the `fewest` elements.
-pub fn getKeysOfMinStorage(self: World, comptime types: []const type) !KeyMin {
+pub fn getKeysOfMinStorage(
+    self: *World,
+    comptime types: []const type,
+    log_enabled: bool,
+) !KeyMin {
     const alloc = self.arena.allocator();
     // NOTE: always get the first component
     var min: u32 = std.math.maxInt(u32);
@@ -89,7 +93,7 @@ pub fn getKeysOfMinStorage(self: World, comptime types: []const type) !KeyMin {
     inline for (types, 0..) |T, i| {
         const Type = ecs_util.Deref(T);
         const size = (try ErasedComponentStorage
-            .cast(self, Type))
+            .cast(self.*, Type, log_enabled))
             .data
             .size;
 
@@ -106,7 +110,7 @@ pub fn getKeysOfMinStorage(self: World, comptime types: []const type) !KeyMin {
         if (idx == i) {
             const Type = ecs_util.Deref(T);
             var iter = (try ErasedComponentStorage
-                .cast(self, Type))
+                .cast(self.*, Type, true))
                 .data
                 .keyIterator();
 
@@ -164,7 +168,7 @@ test "get keys of min storage" {
 /// Get all components (defined in `types`) and return tuples,
 /// where for each, it contains all defined components of an entity.
 pub fn tuplesFromTypes(
-    w: World,
+    w: *World,
     entities: []const EntityID,
     comptime types: []const type,
 ) ![]std.meta.Tuple(types) {

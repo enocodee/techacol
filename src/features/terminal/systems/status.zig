@@ -109,10 +109,11 @@ pub fn inClickedRun(
 
 pub fn inCmdRunning(
     w: *World,
+    state_res: Resource(*State),
     q_child: Query(&.{ Children, With(&.{Terminal}) }),
     q_executor: Query(&.{ Executor, With(&.{Terminal}) }),
 ) !void {
-    const state = try w.getMutResource(State);
+    const state = state_res.result;
     const executor = q_executor.single()[0];
     const child = q_child.single()[0];
     const ui_style_run_btn: *UiStyle = (try w.entity(child.id).getComponents(&.{*UiStyle}))[0];

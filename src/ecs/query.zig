@@ -20,6 +20,7 @@ pub fn Query(comptime types: []const type) type {
     comptime if (types.len <= 0)
         @compileError("Cannot use `Query` with empty arguments");
 
+    comptime var mutable = false;
     const queried_type = comptime get_queried: {
         var count_valid = 0;
         for (types) |T| {
@@ -33,6 +34,7 @@ pub fn Query(comptime types: []const type) type {
         var final_types: [count_valid]type = undefined;
         var curr_i = 0;
         for (types) |T| {
+            mutable = @typeInfo(T) == .pointer;
             if (!query_filter.isFilter(T)) {
                 final_types[curr_i] = T;
                 curr_i += 1;
@@ -79,7 +81,10 @@ pub fn Query(comptime types: []const type) type {
     };
 
     return struct {
+        pub const is_mutable = mutable;
+
         result: Result = .{},
+        log_enabled: bool = true,
 
         pub const Result = struct {
             /// Contains all types ordered by `types` but
@@ -136,11 +141,11 @@ pub fn Query(comptime types: []const type) type {
         /// end of the frame.
         ///
         /// See `query.QueryFilter` for more details about the filters.
-        pub fn query(self: *Self, w: World) QueryError!void {
+        pub fn query(self: *Self, w: *World) QueryError!void {
             const alloc = w.arena.allocator();
             // Temporary list containing entity ids for each component storage
             var temp_list: std.ArrayList(EntityID) = .empty;
-            const min_storage = try query_util.getKeysOfMinStorage(w, &flatten_type);
+            const min_storage = try query_util.getKeysOfMinStorage(w, &flatten_type, self.log_enabled);
             // init the query list with the storage containing the fewest elements
             var query_list: std.ArrayList(EntityID) = .fromOwnedSlice(min_storage.items);
             // list containing all types whose all keys should not be queried
@@ -150,7 +155,7 @@ pub fn Query(comptime types: []const type) type {
             inline for (exclude_types) |T| {
                 // use label to control flow in comptime
                 const Type = ecs_util.Deref(T);
-                const s = try ErasedComponentStorage.cast(w, Type);
+                const s = try ErasedComponentStorage.cast(w.*, Type, self.log_enabled);
 
                 var data_iter = s.data.keyIterator();
                 while (data_iter.next()) |it| {
@@ -166,7 +171,7 @@ pub fn Query(comptime types: []const type) type {
                     if (i == min_storage.idx) break :skip_min;
 
                     const Type = ecs_util.Deref(T);
-                    const s = try ErasedComponentStorage.cast(w, Type);
+                    const s = try ErasedComponentStorage.cast(w.*, Type, self.log_enabled);
 
                     var data_iter = s.data.keyIterator();
                     while (data_iter.next()) |it| {

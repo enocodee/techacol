@@ -1,3 +1,4 @@
+const std = @import("std");
 const components = @import("../ui.zig").components;
 
 const World = @import("../World.zig");
@@ -5,6 +6,8 @@ const Query = @import("../query.zig").Query;
 
 pub const QueryUiToRender = struct {
     const TypedQuery = Query(&[_]type{components.UiStyle});
+    pub const is_mutable = TypedQuery.is_mutable;
+
     result: TypedQuery.Result = .{},
 
     const Self = @This();
@@ -14,11 +17,14 @@ pub const QueryUiToRender = struct {
     ///
     /// Used to extract all components of an entity and ensure they are
     /// existed to render.
-    pub fn query(self: *Self, w: World) !void {
+    pub fn query(self: *Self, w: *World) !void {
         var obj: TypedQuery = .{};
+        // obj.log_enabled = true;
+
         if (obj.query(w)) {
             self.result = obj.result;
         } else |err| {
+            std.log.debug("error occur in query ui component to render", .{});
             switch (err) {
                 World.GetComponentError.StorageNotFound => {}, // ignore
                 else => return err,

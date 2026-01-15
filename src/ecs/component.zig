@@ -26,11 +26,13 @@ pub const ErasedStorage = struct {
     ptr: *anyopaque,
     deinit_fn: *const fn (World, std.mem.Allocator) void,
 
-    pub inline fn cast(w: World, comptime T: type) !*Storage(T) {
+    pub inline fn cast(w: World, comptime T: type, log_enabled: bool) !*Storage(T) {
         const Type = ecs_util.Deref(T);
         const hash = std.hash_map.hashString(@typeName(Type));
-        const s = w.component_storages.get(hash) orelse
+        const s = w.components.storages.get(hash) orelse {
+            if (log_enabled) std.log.err("storage of `{s}` component not found", .{@typeName(Type)});
             return World.GetComponentError.StorageNotFound;
+        };
 
         return ErasedStorage.castFromPtr(s.ptr, Type);
     }
