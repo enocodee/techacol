@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) void {
         run_step.dependOn(&run_exe.step);
     }
 
-    { // run the main test
+    {
         const test_exe = b.addTest(.{
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/main.zig"),
