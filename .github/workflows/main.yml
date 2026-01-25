@@ -27,5 +27,4 @@ jobs:
 
       - name: run test
         run: |
-          zig build test-main --summary all
-          zig build test-ecs --summary all
+          zig build test --summary all
