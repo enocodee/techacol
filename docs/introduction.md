@@ -1,8 +1,8 @@
-- Techacol is an [programming](./programming.md) and **adventure**, **role-playing** game.
-  - Using programming to solve problems (dungeons, wilderness area). **(core)**
-  - Using programming as a supporting tool in combat. **(core)**
-  - The idea map is similar to the map in Swort Art Online. (includes multiple floors, various monter and animal depending on each floor). **(core)**
-  - **Programable entities** (blocks, animal, feature) that are only available for *admin*, *authorized guild member*. **(Not implemented now)**
-  - Guild: **(Not implemented now)**
-    - Using programming to operate machinery in building, farming resources.
-    - Buff/debuff active based on counting all nearly members when doing dungeons.
+# Techacol
+## Description
+Techacol is an **programming**, **adventure** and **role-playing** game developed in [eno](https://github.com/enocodee/enogine).
+
+## Features
+- [Programming](./programming.md)
+- [Exploring the world](./adventure.md)
+- [Guild](./guild.md) **(Not implemented now)**
